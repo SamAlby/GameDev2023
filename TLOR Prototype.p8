@@ -1,5 +1,65 @@
 pico-8 cartridge // http://www.pico-8.com
 version 41
+__lua__
+--draw
+function draw()
+	cls()
+	map(0,0,0,0,16,16)
+	spr(pstate,p.x,p.y)\
+end
+-->8
+--update
+function update()
+    p.update()
+-->8
+--player
+p={ --player table
+    x=64, --key for horiz.
+    y=64, --key for vert.
+    dy=0, --key for horiz. vector
+    dx=0, --key for vert. vector
+    width=16,
+    height=16,
+    hitbox={
+	    x=0,
+	    y=0,
+	    w=15,
+	    h=15
+    },
+    pstate=0, --sprite stage
+    draw=function(self)
+        spr(pstate.p.x,p.y)
+    end,
+    update=function(self)
+        if btn(0) then self.dx-=1 end
+ 	    if btn(1) then self.dx+=1 end
+ 	    if btn(2) then self.dy-=1 end
+ 	    if btn(3) then self.dy+=1 end
+    end
+}
+-->8
+--collisions
+function hit(f,x,y,w,h)
+  collide=false
+  for i=x,x+w,w do
+    if (fget(mget(i/8,y/8),f)) or
+         (fget(mget(i/8,(y+h)/8),f)) then
+          collide=true
+    end
+  end
+  
+  for i=y,y+h,h do
+    if (fget(mget(x/8,i/8),f)) or
+         (fget(mget((x+w)/8,i/8),f)) then
+          collide=true
+    end
+  end
+  
+  return collide
+end
+-->8
+--camera
+-->8
 __gfx__
 00000000006666666666666000666666666666600066666666666660000000000000000000666666666666600000000000000000006666666666666000000000
 000000000633bbbbbbbbbbb60633bbbbbbbbbbb60633bbbbbbbbbbb600000000000000000633bbbbbbbbbbb600666666666666600633bbbbbbbbbbb600000000
