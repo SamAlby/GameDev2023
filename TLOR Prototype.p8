@@ -10,25 +10,16 @@ __lua__
 -->8
 --basic functions
 function _draw()
- if in_menu
- then
-  draw_menu()
- else
-  draw_game()
+ if in_menu then draw_menu()
+ else draw_game()
  end
  tb_draw()
 end
 
 function _update()
- if reading 
- then 
- tb_update()
- else
-  if in_menu
-  then
-   update_menu()
-  else
-   update_game()
+ if reading then tb_update()
+  elseif in_menu then update_menu()
+   else update_game()
   end
  end
 end
@@ -98,10 +89,9 @@ function update_menu()
   	end
   	if m.options[m.sel]=="exit" then
   	 extcmd("shutdown")
+    end
   end
  end
-end
-  
  col1=pals[palnum][1]
  col2=pals[palnum][2]
  menu_timer+=1
@@ -110,7 +100,7 @@ end
 function draw_menu()
  cls(col2)
  draw_options()
- end
+end
 -->8
 --game
 function update_game()
@@ -123,7 +113,9 @@ function draw_game()
  camera_update()
  map(0,0,0,0,128,32)
  p.draw()
- npcs.cara.draw(npcs.cara)
+ for e in all(npcs) do
+  e.draw(e)
+ end
 end
 
 function init_game()
@@ -188,9 +180,9 @@ p={ --player table
   then 
    p.animate("idle",p.stage)
   end
-  --for x in all(npcs) do
-  if (hitactor(p,npcs.cara)) colliding=true
-  --end
+  for e in all(npcs) do
+   if (hitactor(p,e)) colliding=true
+  end
   if dx!=0
   then
    if colliding or hitx(0,p.x+p.dx,p.y,p.w,p.h)
@@ -248,7 +240,7 @@ function init_npcs()
     stage=0,
     draw=function(self)
      spr(self.state,self.x,self.y,2,2,true,false)
-     if nearactor(npcs.cara,p)
+     if nearactor(p,self)
      then
       print('press\nz!', self.x-5, self.y-9,1)
       if(reading) self.animate(self)
