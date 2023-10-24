@@ -115,7 +115,7 @@ function draw_menu()
 --game
 function update_game()
  p.update()--anims & movement
- cara.update() 
+ npcs.cara.update(npcs.cara) 
  end
 
 function draw_game()
@@ -123,7 +123,7 @@ function draw_game()
  camera_update()
  map(0,0,0,0,128,32)
  p.draw()
- cara.draw()
+ npcs.cara.draw(npcs.cara)
 end
 
 function init_game()
@@ -163,6 +163,7 @@ p={ --player table
   end
  end,
  update=function(self)
+  local colliding=false
   p.dx=0
   p.dy=0
   if btn(0) then 
@@ -187,9 +188,12 @@ p={ --player table
   then 
    p.animate("idle",p.stage)
   end
+  --for x in all(npcs) do
+  if (hitactor(p,npcs.cara)) colliding=true
+  --end
   if dx!=0
   then
-   if hitx(0,p.x+p.dx,p.y,p.w,p.h)
+   if colliding or hitx(0,p.x+p.dx,p.y,p.w,p.h)
    then
    else
     p.x+=p.dx
@@ -197,7 +201,7 @@ p={ --player table
   end
   if dy!=0
   then
-   if hity(0,p.x,p.y+p.dy,p.w,p.h)
+   if colliding or hity(0,p.x,p.y+p.dy,p.w,p.h)
    then
    else
     p.y+=p.dy
@@ -230,41 +234,45 @@ p={ --player table
 function init_npcs()
 
 --cara
-	cara={
-  x=188,
-  y=42,
-  anim_wait=0.3,
-  anim_time=0,
-  state=64,
-  stage=0,
-  draw=function(self)
-   spr(cara.state,cara.x,cara.y,2,2,true,false)
-   if hitx(0,p.x,p.y,p.w+20,p.h+20)or hity(0,p.x,p.y,p.w+20,p.h+20)
-   then
-    print('press\nz!', cara.x-5, cara.y-9,1)
-    if(reading) cara.animate(cara.state)
+ npcs={
+	 cara={
+    x=188,
+    y=42,
+    dx=0,
+    dy=0,
+    w=16,
+    h=16,
+    anim_wait=0.3,
+    anim_time=0,
+    state=64,
+    stage=0,
+    draw=function(self)
+     spr(self.state,self.x,self.y,2,2,true,false)
+     if nearactor(npcs.cara,p)
+     then
+      print('press\nz!', self.x-5, self.y-9,1)
+      if(reading) self.animate(self)
+     end
+    end,
+    update=function(self)
+     if nearactor(self,p)
+      then if (btnp(4)) tb_init(1,{"hey you! you're finally\npowered on! i was getting\nworried, you know."},cam_x,cam_y+106)
+     end
+    end,
+    animate=function(self)
+    if(time()-self.anim_time>self.anim_wait)
+    then 
+     self.stage+=4
+     self.anim_time=time()
+    if self.stage>4
+    then 
+     self.stage=0
+    end
    end
-  end,
-  update=function(self)
-   if hitx(0,p.x,p.y,p.w+20,p.h+20)or hity(0,p.x,p.y,p.w+20,p.h+20)
-    then if (btnp(4)) tb_init(1,{"hey you! you're finally\npowered on! i was getting\nworried, you know."},cam_x,cam_y+106)
+   self.state=64+self.stage
    end
-  end,
-  animate=function()
-  if(time()-cara.anim_time>cara.anim_wait)
-  then 
-   cara.stage+=4
-   cara.anim_time=time()
-   if cara.stage>4
-   then 
-   cara.stage=0
-   end
-  end
-  cara.state=64+cara.stage
-  end
  }
-
- --other npcs go below
+}
 
 end
 -->8
@@ -291,6 +299,30 @@ function hity(f,x,y,w,h)
   end
  end
  return colly
+end
+
+function hitactor(obj,other)
+ if
+  other.x+other.dx+other.w > obj.x+obj.dx and 
+  other.y+other.dy+other.h > obj.y+obj.dy and
+  other.x+other.dx < obj.x+obj.dx+obj.w and
+  other.y+other.dy < obj.y+obj.dy+obj.h
+ then
+  return true
+ end
+ return false
+end
+
+function nearactor(obj,other)
+ if
+  other.x+other.w+5 > obj.x and 
+  other.y+other.h+5 > obj.y and
+  other.x < obj.x+obj.w+5 and
+  other.y < obj.y+obj.h+5 
+ then
+  return true
+ end
+ return false
 end
 -->8
 --text box
