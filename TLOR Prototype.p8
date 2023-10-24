@@ -20,7 +20,6 @@ function _update()
  if reading then tb_update()
   elseif in_menu then update_menu()
    else update_game()
-  end
  end
 end
 
@@ -113,8 +112,9 @@ function draw_game()
  camera_update()
  map(0,0,0,0,128,32)
  p.draw()
+ npcs.cara.draw(npcs.cara)
  for e in all(npcs) do
-  e.draw(e)
+  spr(5,p.x,p.y)
  end
 end
 
@@ -183,22 +183,14 @@ p={ --player table
   for e in all(npcs) do
    if (hitactor(p,e)) colliding=true
   end
-  if dx!=0
-  then
-   if colliding or hitx(0,p.x+p.dx,p.y,p.w,p.h)
-   then
-   else
-    p.x+=p.dx
-   end
+  if (dx!=0) then
+   if (colliding or hitx(0,p.x+p.dx,p.y,p.w,p.h)) p.dx=0
   end
-  if dy!=0
-  then
-   if colliding or hity(0,p.x,p.y+p.dy,p.w,p.h)
-   then
-   else
-    p.y+=p.dy
-   end
+  if (dy!=0) then
+   if (colliding or hity(0,p.x,p.y+p.dy,p.w,p.h)) p.dy=0
   end
+  p.x+=p.dx
+  p.y+=p.dy
  end,
  animate=function(state)
   if(time()-p.anim_time>p.anim_wait)
@@ -252,19 +244,50 @@ function init_npcs()
      end
     end,
     animate=function(self)
-    if(time()-self.anim_time>self.anim_wait)
-    then 
-     self.stage+=4
-     self.anim_time=time()
-    if self.stage>4
-    then 
-     self.stage=0
+     if (time()-self.anim_time>self.anim_wait)
+     then 
+      self.stage+=4
+      self.anim_time=time()
+     if (self.stage>4) self.stage=0
+     end
+     self.state=64+self.stage
     end
-   end
-   self.state=64+self.stage
-   end
+   },
+   coro={
+    x=148,
+    y=42,
+    dx=0,
+    dy=0,
+    w=16,
+    h=16,
+    anim_wait=0.3,
+    anim_time=0,
+    state=64,
+    stage=0,
+    draw=function(self)
+     spr(self.state,self.x,self.y,2,2,true,false)
+     if nearactor(p,self)
+     then
+      print('press\nz!', self.x-5, self.y-9,1)
+      if(reading) self.animate(self)
+     end
+    end,
+    update=function(self)
+     if nearactor(self,p)
+      then if (btnp(4)) tb_init(1,{"hey you! you're finally\npowered on! i was getting\nworried, you know."},cam_x,cam_y+106)
+     end
+    end,
+    animate=function(self)
+     if (time()-self.anim_time>self.anim_wait)
+     then 
+      self.stage+=4
+      self.anim_time=time()
+     if (self.stage>4) self.stage=0
+     end
+     self.state=64+self.stage
+    end
+   },
  }
-}
 
 end
 -->8
