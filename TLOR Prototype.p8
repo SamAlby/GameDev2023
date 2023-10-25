@@ -10,21 +10,24 @@ __lua__
 -->8
 --basic functions
 function _draw()
- if in_menu then draw_menu()
+ if reading then tb_draw()
+ elseif dialogue then draw_dia_menu()
+ elseif main_menu then draw_menu()
  else draw_game() 
  end
- tb_draw()
 end
 
 function _update()
  if reading then tb_update()
- elseif in_menu then update_menu()
+ elseif main_menu or dialogue then update_menu()
  else update_game()
  end
 end
 
 function _init()
- init_menu()
+ sub_mode=0
+ main_menu=true
+ init_menu(0,40,{"start","controls","exit"})
 end
 
 -->8
@@ -56,43 +59,33 @@ function draw_options()
  end
 end
 
-function init_menu()
- m={}
- m.x=0
- cx=m.x
- m.y=40
- m.options={"start","controls",
-            "exit"}
- m.amt=0
- for i in all(m.options) do
-  m.amt+=1
+function draw_dia_options()
+ for i=1, m.amt do
+  oset=i*8
+  if i==m.sel then
+   rectfill(cx,m.y+oset-1,cx+116,m.y+oset+5,col1)
+   print(m.options[i],cx+1,m.y+oset,col2)
+  else
+   print(m.options[i],m.x,m.y+oset,col1)
+  end
  end
- m.sel=1
- sub_mode=0
- menu_timer=0
- pals={{7,0},{15,1},{6,5},
-			   {10,8},{7,3},{7,2}}
- palnum=1
- in_menu=true
 end
 
-function init_dia_menu(options)
+function init_menu(xoff,yoff,opt)
  m={}
- m.x=8
+ m.x=xoff
  cx=m.x
- m.y=40
- m.options=options
+ m.y=yoff
+ m.options=opt
  m.amt=0
  for i in all(m.options) do
   m.amt+=1
  end
  m.sel=1
- sub_mode=0
  menu_timer=0
  pals={{7,0},{15,1},{6,5},
 			   {10,8},{7,3},{7,2}}
  palnum=1
- in_menu=true
 end
 
 function update_menu()
@@ -111,6 +104,25 @@ function update_menu()
     end
   end
  end
+ if sub_mode==1 then
+  if btnp(4) and menu_timer>1 then
+   if m.sel==1 then
+    tb_init(1,handle_response(cara_options[m.sel][cara_stages.one]),cam_x,cam_y+106)
+    if(cara_stages.one<3) cara_stages.one+=1
+    init_menu(cam_x,cam_y+96,{cara_options[1][cara_stages.one],cara_options[2][cara_stages.two],cara_options[3][cara_stages.three]})
+   end
+   if m.sel==2 then
+    tb_init(1,handle_response(cara_options[m.sel][cara_stages.two]),cam_x,cam_y+106)
+    if(cara_stages.two<4) cara_stages.two+=1
+    init_menu(cam_x,cam_y+96,{cara_options[1][cara_stages.one],cara_options[2][cara_stages.two],cara_options[3][cara_stages.three]})
+   end
+   if m.sel==3 then
+    tb_init(1,handle_response(cara_options[m.sel][cara_stages.three]),cam_x,cam_y+106)
+    if(cara_stages.three<4) cara_stages.three+=1
+    init_menu(cam_x,cam_y+96,{cara_options[1][cara_stages.one],cara_options[2][cara_stages.two],cara_options[3][cara_stages.three]})
+   end
+  end
+ end
  col1=pals[palnum][1]
  col2=pals[palnum][2]
  menu_timer+=1
@@ -119,6 +131,14 @@ end
 function draw_menu()
  cls(col2)
  draw_options()
+end
+
+function draw_dia_menu()
+ if dialogue then
+  rectfill(tb.x,tb.y-5,tb.x+tb.w,tb.y+tb.h,tb.col1) -- draw the background.
+  rect(tb.x,tb.y-5,tb.x+tb.w,tb.y+tb.h,tb.col2) -- draw the border.
+  draw_dia_options()
+ end
 end
 -->8
 --game
@@ -132,12 +152,14 @@ function draw_game()
  camera_update()
  map(0,0,0,0,128,32)
  p.draw()
-	draw_npcs()
+ draw_npcs()
+ if (dialogue) draw_options()
 end
 
 function init_game()
- in_menu=false
+ main_menu=false
  reading=false
+ dialogue=false
  init_npcs()
 end
 
@@ -257,7 +279,11 @@ function init_npcs()
     end
    end,
    update=function(self)
-    if(nearactor(p,self) and btnp(4)) handle_dialogue("cara",dia_stage)
+    if nearactor(p,self) then
+     if (btnp(4)) then
+      handle_dialogue("cara",self.dia_stage)
+     end
+    end
    end,
    animate=function(self)
     if (time()-self.anim_time>self.anim_wait)
@@ -272,14 +298,23 @@ function init_npcs()
    	tb_init(1,{dial},cam_x,cam_y+106)
    end
   }
+
+  cara_options={
+  {"who are you?","carebot?","how do you pronounce cara?"},
+  {"where am i?","mechmedics?","spring city?","used to be?"},
+  {"how long was i out?","why can't i remember anything?","can you fix it?","where can i find the parts?"}
+  }
+  
+  cara_stages={one=1,two=1,three=1}
+
 end
 
 function update_npcs()
- cara:update()
+ cara:update(cara)
 end
 
 function draw_npcs()
- cara:draw()
+ cara:draw(cara)
 end
 
 function npcs_colliding()
@@ -288,20 +323,34 @@ function npcs_colliding()
  return colliding
 end
 
+function convertnumtoword(num)
+ if(num==1) return "one"
+ if(num==1) return "two"
+ if(num==1) return "three"
+ if(num==1) return "four"
+end
+
+
 function handle_dialogue(c,cs)
-  if cs==0
-  then
-   tb_init(1,{"hey you! you're finally\npowered on! i was getting\nworried, you know."},cam_x,cam_y+106)
-  end
-  if cs==1
-  then
-  end
-  if cs==2
-  then
-  end
-  if cs==3
-  then
- end
+  if (cs==0) tb_init(1,{"hey you! you're finally\npowered on! i was getting\nworried, you know."},cam_x,cam_y+106)
+  dialogue=true
+  sub_mode=1
+  init_menu(cam_x,cam_y+96,{cara_options[1][cara_stages.one],cara_options[2][cara_stages.two],cara_options[3][cara_stages.three]})
+end
+
+function handle_response(sel)
+  if(sel=="who are you?") return {"my name is cara. i am a \ncarebot. i am here to help."}
+  if(sel=="where am i?") return {"you are in a mechmedics repair \nfacility, located in spring \ncity. you are safe."}
+  if(sel=="how long was i out?") return {"well, i'm not sure how long you \nwere out there before we found \nyou, but you've been here for...","...almost 92 hours."} 
+  if(sel=="carebot?") return {"that's right! my function is to repair damaged or malfunctioning inorganic units like yourself."} 
+  if(sel=="mechmedics?") return {"yes... a repair facility for robots. we send daily patrols throughout spring city to recover units in need."} 
+  if(sel=="why can't i remember anything?") return {"oh no... i was afraid of this. while I was repairing you, i noticed that your memory drive has some critically damaged components."} 
+  if(sel=="how do you pronounce cara?") return {"oh! car-a. Like a car, because i'm a robot, you know? care-a would be pretty on the nose. thanks for asking! **improve favor**"} 
+  if(sel=="spring city?") return {"that's right! spring city was established in 2094 in what used to be the american southwest. it started as a collective of service droids that pooled their collective processing power to create a settlement."} 
+  if(sel=="can you fix it??") return {"unfortunately, i don't have the required parts here with me. resources are scarce. "} 
+  if(sel=="used to be?") return {'yeah! of course, it was only considered "america" while there were still humans around.'," they've been gone for ...gosh, decades now."} 
+  if(sel=="where can i find the parts?") return {"well, you'll need a new chrono-encryption unit and a quantum data matrix. parts like those are hard to come by nowadays. you'll need to venture to the voltoria hub to find replacements. just go right, you can't miss it."}
+  return sel
 end
 -->8
 --collisions
@@ -685,7 +734,7 @@ d5dbd6d6d5d5ebd6d7d5d5d7d9d5d5d5d8d7d5ead5d7d7d5d5ead8d6d5d5d5d9d6d5d5d5d6d9d5d5
 d5d5d8d6d5d5d5d9d8d5d5d9d6d5d5d5d6d9d5d5d5d6d6d5d5d5d6d9dbd5dbd6d6d5d5d5d6d6d5d5d5000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 d5d5d6d9d5d5d5d6d6dad5d6d9d5d5d5d6d8dbd5d5d9d7d5ead5d6d6d5ead5d7d8ebd5d5d7d6d5d5eb000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 d5d5d5d5dad5ead5d5d5d5d5d5ead5d5d5d5d5ebd5d5d5d5d5d5d5d5d5d5d5d5d5d5d5dad5d5d5d5d5000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-d5d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+d5d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d5000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 d5e2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d5000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 d5d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2e2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d5000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 d5d2d2d2d2e2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d5000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
