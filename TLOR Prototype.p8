@@ -25,9 +25,7 @@ function _update()
 end
 
 function _init()
- sub_mode=0
- main_menu=true
- init_menu(0,40,{"start","controls","exit"})
+ init_menu()
 end
 
 -->8
@@ -157,7 +155,7 @@ function draw_game()
 end
 
 function init_game()
- main_menu=false
+ mamain_menu=false
  reading=false
  dialogue=false
  init_npcs()
@@ -279,6 +277,11 @@ function init_npcs()
     end
    end,
    update=function(self)
+    if nearactor(p,self) then
+     if (btnp(4)) then
+      handle_dialogue("cara",self.dia_stage)
+     end
+    end
     if nearactor(p,self) then
      if (btnp(4)) then
       handle_dialogue("cara",self.dia_stage)
