@@ -52,18 +52,19 @@ function draw_options()
   oset=i*8
   if i==m.sel then
    rectfill(cx,m.y+oset-1,cx+36,m.y+oset+5,col1)
-   print(m.options[i],cx+1,m.y+oset,col2)
+   print(m.options[i],cx+2,m.y+oset,col2)
   else
-   print(m.options[i],m.x,m.y+oset,col1)
+   print(m.options[i],m.x+2,m.y+oset,col1)
   end
  end
 end
 
 function draw_dia_options()
  for i=1, m.amt do
-  oset=i*8
+  oset=i*6.40
   if i==m.sel then
    rectfill(cx,m.y+oset-1,cx+116,m.y+oset+5,col1)
+   print("🅾️",cx+108,m.y+oset,1)
    print(m.options[i],cx+1,m.y+oset,col2)
   else
    print(m.options[i],m.x,m.y+oset,col1)
@@ -105,21 +106,16 @@ function update_menu()
   end
  end
  if sub_mode==1 then
+  m.options = {}
+  add(m.options,cara_options[1][cara_stages[1]])
+  add(m.options,cara_options[2][cara_stages[2]])
+  if (cara_stages[3]<3) then add(m.options,cara_options[3][cara_stages[3]])
+  else add(m.options,"*exit*") end
   if btnp(4) and menu_timer>1 then
-   if m.sel==1 then
-    tb_init(1,handle_response(cara_options[m.sel][cara_stages.one]),cam_x,cam_y+106)
-    if(cara_stages.one<3) cara_stages.one+=1
-    init_menu(cam_x,cam_y+96,{cara_options[1][cara_stages.one],cara_options[2][cara_stages.two],cara_options[3][cara_stages.three]})
-   end
-   if m.sel==2 then
-    tb_init(1,handle_response(cara_options[m.sel][cara_stages.two]),cam_x,cam_y+106)
-    if(cara_stages.two<4) cara_stages.two+=1
-    init_menu(cam_x,cam_y+96,{cara_options[1][cara_stages.one],cara_options[2][cara_stages.two],cara_options[3][cara_stages.three]})
-   end
-   if m.sel==3 then
-    tb_init(1,handle_response(cara_options[m.sel][cara_stages.three]),cam_x,cam_y+106)
-    if(cara_stages.three<4) cara_stages.three+=1
-    init_menu(cam_x,cam_y+96,{cara_options[1][cara_stages.one],cara_options[2][cara_stages.two],cara_options[3][cara_stages.three]})
+   if m.options[m.sel]=="*exit*" then dialogue=false
+   else tb_init(1,handle_response(cara_options[m.sel][cara_stages[m.sel]]),cam_x,cam_y+106)
+   if(m.sel==1 and cara_stages[1]<3) then cara_stages[1]+=1 
+   elseif(m.sel!=1 and cara_stages[m.sel]<4) then cara_stages[m.sel]+=1 end
    end
   end
  end
@@ -135,8 +131,8 @@ end
 
 function draw_dia_menu()
  if dialogue then
-  rectfill(tb.x,tb.y-5,tb.x+tb.w,tb.y+tb.h,tb.col1) -- draw the background.
-  rect(tb.x,tb.y-5,tb.x+tb.w,tb.y+tb.h,tb.col2) -- draw the border.
+  rectfill(tb.x,tb.y,tb.x+tb.w,tb.y+tb.h,tb.col1) -- draw the background.
+  rect(tb.x,tb.y,tb.x+tb.w,tb.y+tb.h,tb.col2) -- draw the border.
   draw_dia_options()
  end
 end
@@ -305,7 +301,7 @@ function init_npcs()
   {"how long was i out?","why can't i remember anything?","can you fix it?","where can i find the parts?"}
   }
   
-  cara_stages={one=1,two=1,three=1}
+  cara_stages={1,1,1}
 
 end
 
@@ -323,33 +319,25 @@ function npcs_colliding()
  return colliding
 end
 
-function convertnumtoword(num)
- if(num==1) return "one"
- if(num==1) return "two"
- if(num==1) return "three"
- if(num==1) return "four"
-end
-
-
 function handle_dialogue(c,cs)
   if (cs==0) tb_init(1,{"hey you! you're finally\npowered on! i was getting\nworried, you know."},cam_x,cam_y+106)
   dialogue=true
   sub_mode=1
-  init_menu(cam_x,cam_y+96,{cara_options[1][cara_stages.one],cara_options[2][cara_stages.two],cara_options[3][cara_stages.three]})
+  init_menu(cam_x+2,cam_y+102,{cara_options[1][cara_stages[1]],cara_options[2][cara_stages[2]],cara_options[3][cara_stages[3]]})
 end
 
 function handle_response(sel)
-  if(sel=="who are you?") return {"my name is cara. i am a \ncarebot. i am here to help."}
+  if(sel=="who are you?") return {"my name is cara.","i am a carebot. \ni am here to help!"}
   if(sel=="where am i?") return {"you are in a mechmedics repair \nfacility, located in spring \ncity. you are safe."}
   if(sel=="how long was i out?") return {"well, i'm not sure how long you \nwere out there before we found \nyou, but you've been here for...","...almost 92 hours."} 
-  if(sel=="carebot?") return {"that's right! my function is to repair damaged or malfunctioning inorganic units like yourself."} 
-  if(sel=="mechmedics?") return {"yes... a repair facility for robots. we send daily patrols throughout spring city to recover units in need."} 
-  if(sel=="why can't i remember anything?") return {"oh no... i was afraid of this. while I was repairing you, i noticed that your memory drive has some critically damaged components."} 
-  if(sel=="how do you pronounce cara?") return {"oh! car-a. Like a car, because i'm a robot, you know? care-a would be pretty on the nose. thanks for asking! **improve favor**"} 
-  if(sel=="spring city?") return {"that's right! spring city was established in 2094 in what used to be the american southwest. it started as a collective of service droids that pooled their collective processing power to create a settlement."} 
-  if(sel=="can you fix it??") return {"unfortunately, i don't have the required parts here with me. resources are scarce. "} 
-  if(sel=="used to be?") return {'yeah! of course, it was only considered "america" while there were still humans around.'," they've been gone for ...gosh, decades now."} 
-  if(sel=="where can i find the parts?") return {"well, you'll need a new chrono-encryption unit and a quantum data matrix. parts like those are hard to come by nowadays. you'll need to venture to the voltoria hub to find replacements. just go right, you can't miss it."}
+  if(sel=="carebot?") return {"that's right! my function is to \nrepair damaged or \nmalfunctioning inorganic units","like yourself."} 
+  if(sel=="mechmedics?") return {"yes... a repair facility for \nrobots.","we send daily patrols \nthroughout spring city \nto recover units in need."} 
+  if(sel=="why can't i remember anything?") return {"oh no...","i was afraid of this. \nwhile i was repairing you,","i noticed that your memory \ndrive has had some critically \ndamaged components."} 
+  if(sel=="how do you pronounce cara?") return {"oh! car-a. like a car, because \ni'm a robot, you know?","care-a would be pretty on the \nnose. thanks for asking!","       **improve favor**"} 
+  if(sel=="spring city?") return {"that's right!","spring city was established in \n2094 in what used to be \nthe american southwest.","it started as a small \ncollective of service droids.","together, they pooled \ntheir collective processing\npower to create a settlement."} 
+  if(sel=="can you fix it?") return {"unfortunately, i don't have the \nrequired parts here with me.","resources are scarce."} 
+  if(sel=="used to be?") return {'yeah!','of course, it was only \nconsidered "america" while \nthere were still humans.',"they've been gone for...","gosh...","decades now."} 
+  if(sel=="where can i find the parts?") return {"well,","you'll need a new \nchrono-encryption unit \nand a quantum data matrix.","parts like those are hard \nto come by nowadays.","you'll need to venture to \nthe voltoria hub to find \nreplacements.","just go right, \n\nyou can't miss it. :)"}
   return sel
 end
 -->8
@@ -431,7 +419,6 @@ function tb_update()  -- this function handles the text box on every frame updat
    if (ord(tb.str[tb.i],tb.char)!=32) sfx(tb.voice) -- play the voice sound effect.
   end
   if (btnp(5)) tb.char=#tb.str[tb.i] -- advance to the last character, to speed up the message.
- print("\x8e",xoff,yoff,1)
  elseif btnp(5) then -- if already on the last message character and button ❎/x is pressed:
   if #tb.str>tb.i then -- if the number of strings to display is larger than the current index (this means that there's another message to display next):
    tb.i+=1 -- increase the index, to display the next message on tb.str
@@ -440,10 +427,7 @@ function tb_update()  -- this function handles the text box on every frame updat
   else -- if there are no more messages to display:
    reading=false -- set reading to false. resumes normal gameplay.
   end
-  else
-
  end
-
 end
 
 function tb_draw() -- this function draws the text box.
@@ -451,6 +435,7 @@ function tb_draw() -- this function draws the text box.
   rectfill(tb.x,tb.y,tb.x+tb.w,tb.y+tb.h,tb.col1) -- draw the background.
   rect(tb.x,tb.y,tb.x+tb.w,tb.y+tb.h,tb.col2) -- draw the border.
   print(sub(tb.str[tb.i],1,tb.char),tb.x+2,tb.y+2,tb.col3) -- draw the text.
+  print("❎",tb.x+118,tb.y+15,1)
  end
 end
 
@@ -471,9 +456,6 @@ end
 function intro_init()
 
 end
--->8
---dialogue
-
 __gfx__
 00666666666666600066666666666660006666666666666000666666666666600066666666666660000000000000000000666666666666600000000000000000
 0633bbbbbbbbbbb60633bbbbbbbbbbb60633bbbbbbbbbbb60633bbbbbbbbbbb60633bbbbbbbbbbb600666666666666600633bbbbbbbbbbb60066666666666660
