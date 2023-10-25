@@ -10,7 +10,7 @@ __lua__
 -->8
 --basic functions
 function _draw()
- if in_menu then draw_menu()
+ if main_menu then draw_menu()
  else draw_game() 
  end
  tb_draw()
@@ -18,13 +18,13 @@ end
 
 function _update()
  if reading then tb_update()
- elseif in_menu then update_menu()
+ elseif main_menu then update_menu()
  else update_game()
  end
 end
 
 function _init()
- init_menu()
+ init_menu({"start","controls","exit"})
 end
 
 -->8
@@ -56,13 +56,12 @@ function draw_options()
  end
 end
 
-function init_menu()
+function init_menu(opt)
  m={}
  m.x=0
  cx=m.x
  m.y=40
- m.options={"start","controls",
-            "exit"}
+ m.options=opt
  m.amt=0
  for i in all(m.options) do
   m.amt+=1
@@ -73,26 +72,7 @@ function init_menu()
  pals={{7,0},{15,1},{6,5},
 			   {10,8},{7,3},{7,2}}
  palnum=1
- in_menu=true
-end
-
-function init_dia_menu(options)
- m={}
- m.x=8
- cx=m.x
- m.y=40
- m.options=options
- m.amt=0
- for i in all(m.options) do
-  m.amt+=1
- end
- m.sel=1
- sub_mode=0
- menu_timer=0
- pals={{7,0},{15,1},{6,5},
-			   {10,8},{7,3},{7,2}}
- palnum=1
- in_menu=true
+ main_menu=true
 end
 
 function update_menu()
@@ -109,6 +89,22 @@ function update_menu()
   	if m.options[m.sel]=="exit" then
   	 extcmd("shutdown")
     end
+  end
+ end
+ if sub_mode==1 then
+  if btnp(4) and menu_timer>1 then
+   if m.sel==0 then
+    
+   end
+   if m.sel==1 then
+   
+   end
+   if m.sel==2 then
+   
+   end
+   if m.sel==2 then
+   
+   end
   end
  end
  col1=pals[palnum][1]
@@ -136,7 +132,7 @@ function draw_game()
 end
 
 function init_game()
- in_menu=false
+ main_menu=false
  reading=false
  init_npcs()
 end
@@ -257,7 +253,11 @@ function init_npcs()
     end
    end,
    update=function(self)
-    if(nearactor(p,self) and btnp(4)) handle_dialogue("cara",dia_stage)
+    if nearactor(p,self) then
+     if (btnp(4)) then
+      handle_dialogue("cara",self.dia_stage)
+     end
+    end
    end,
    animate=function(self)
     if (time()-self.anim_time>self.anim_wait)
@@ -275,11 +275,11 @@ function init_npcs()
 end
 
 function update_npcs()
- cara:update()
+ cara:update(cara)
 end
 
 function draw_npcs()
- cara:draw()
+ cara:draw(cara)
 end
 
 function npcs_colliding()
@@ -289,19 +289,8 @@ function npcs_colliding()
 end
 
 function handle_dialogue(c,cs)
-  if cs==0
-  then
-   tb_init(1,{"hey you! you're finally\npowered on! i was getting\nworried, you know."},cam_x,cam_y+106)
-  end
-  if cs==1
-  then
-  end
-  if cs==2
-  then
-  end
-  if cs==3
-  then
- end
+ if (cs==0) cara.speak("hey you! you're finally\npowered on! i was getting\nworried, you know.")
+ 
 end
 -->8
 --collisions
@@ -685,7 +674,7 @@ d5dbd6d6d5d5ebd6d7d5d5d7d9d5d5d5d8d7d5ead5d7d7d5d5ead8d6d5d5d5d9d6d5d5d5d6d9d5d5
 d5d5d8d6d5d5d5d9d8d5d5d9d6d5d5d5d6d9d5d5d5d6d6d5d5d5d6d9dbd5dbd6d6d5d5d5d6d6d5d5d5000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 d5d5d6d9d5d5d5d6d6dad5d6d9d5d5d5d6d8dbd5d5d9d7d5ead5d6d6d5ead5d7d8ebd5d5d7d6d5d5eb000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 d5d5d5d5dad5ead5d5d5d5d5d5ead5d5d5d5d5ebd5d5d5d5d5d5d5d5d5d5d5d5d5d5d5dad5d5d5d5d5000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-d5d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+d5d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d5000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 d5e2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d5000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 d5d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2e2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d5000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 d5d2d2d2d2e2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d5000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
