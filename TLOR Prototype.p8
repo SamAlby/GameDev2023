@@ -109,14 +109,11 @@ function update_menu()
   m.options = {}
   add(m.options,cara_options[1][cara_stages[1]])
   add(m.options,cara_options[2][cara_stages[2]])
-  if (cara_stages[3]<5) then add(m.options,cara_options[3][cara_stages[3]])
-  else add(m.options,"*exit*") end
+  add(m.options,cara_options[3][cara_stages[3]])
   if btnp(4) and menu_timer>1 then
    if m.options[m.sel]=="*exit*" then dialogue=false
    else tb_init(1,handle_response(cara_options[m.sel][cara_stages[m.sel]]),cam_x,cam_y+106)
-   cara_stages[m.sel]+=1
-   if(m.sel==1 and cara_stages[1]>3) then cara_stages[1]=3 
-   elseif(cara_stages[2]>4) then cara_stages[2]=4 end
+   if(cara_stages[m.sel]<count(cara_options[m.sel])) cara_stages[m.sel]+=1
    end
   end
  end
@@ -299,9 +296,9 @@ function init_npcs()
   }
 
   cara_options={
-  {"who are you?","carebot?","how do you pronounce cara?"},
-  {"where am i?","mechmedics?","spring city?","used to be?"},
-  {"how long was i out?","why can't i remember anything?","can you fix it?","where can i find the parts?"}
+  {"who are you?","carebot?","how do you pronounce cara?"," "},
+  {"where am i?","mechmedics?","spring city?","used to be?"," "},
+  {"how long was i out?","why can't i remember anything?","can you fix it?","where can i find the parts?","*exit*"}
   }
   
   cara_stages={1,1,1}
