@@ -10,7 +10,8 @@ __lua__
 -->8
 --basic functions
 function _draw()
- if reading then tb_draw()
+ if intro then intro_draw()
+ elseif reading then tb_draw()
  elseif dialogue then draw_dia_menu()
  elseif main_menu then draw_menu()
  else draw_game() 
@@ -18,7 +19,8 @@ function _draw()
 end
 
 function _update()
- if reading then tb_update()
+ if intro then intro_update()
+ elseif reading then tb_update()
  elseif main_menu or dialogue then update_menu()
  else update_game()
  end
@@ -95,7 +97,7 @@ function update_menu()
   if btnp(4) and
   menu_timer>1 then
    if m.options[m.sel]=="start" then
-    init_game()
+    intro_init()
    end
    if m.options[m.sel]=="controls" then
   	 tb_init(1,{"use the ⬆️⬇️⬅️➡️ controls to\nmove pip, use 🅾️ to select, and\n❎ to go back."},0,106)
@@ -137,7 +139,7 @@ end
 -->8
 --game
 function update_game()
- p.update()--anims & movement
+ p.update() -- anims & movement
  update_npcs()
  end
 
@@ -454,8 +456,67 @@ end
 -->8
 --intro scene
 function intro_init()
-
+ intro=true
+ reading=true -- sets reading to true when a text box has been called
+ intro_tb={ -- table containing all properties of the text box
+ str={
+  "[system initialization]\n\nloading motor control modules...\ncalibrating sensor array...\nestablishing comms protocol...\n",
+  "[actuator initialization]\n\npowering up servo motors...\nactivating joint articulation...\nverifying limb mobility...\nconducting motor diagnostics...\nfinalizing actuator sync...\n",
+  "[motion system check complete]\n\nmotor functions:\n\n  online...     check.\n  calibrated... check.\n",
+  "[sensory system activation]\n\ninitializing visual sensors...\nactivating auditory sensors...\ninitializing tactile sensors...\ncalibrating environment scan...",
+  "[sensor array check complete]\n\nsensory systems:\n\n  operational...    check.\n  synchronized...   check.",
+  "[processor boot]\n\nbooting cpu...\nloading motor control...\nboot decision-making routines...\ntraining learning algorithms...\nfinalizing neural network...\n",
+  "[error detected]\n\nattempting data recovery...\nscanning corrupted sectors...\nisolating malfunctioning blocks...\nverifying data integrity...\n\n[verification failure]",
+  "**critical error**\n\nunable to repair memory drive.\n\ndata corruption exceeds\nrecovery capabilities.\n\nwarning:\nanomalies detected in memory\n\ninitiating diagnostic procedure.",
+  "[robotic brain online]\n\nprocessor functions:\n\n optimized...   check.\n ready...       check.",
+  "[robot status]\n\nmotor systems...          check.\nsensory systems...        check.\ndecision-making...        ready.\nlearning capabilities...  ready.\n\n[activation complete]",
+  "it's time to wake up..."
+  }, -- the strings
+ voice=4, -- the voice
+ i=1, -- index used to tell what string from tb.str to read
+ cur=0, -- buffer used to progressively show characters on the text box
+ char=0, -- current character to be drawn on the text box
+ x=0, -- horizontal offset
+ y=5, -- vertical offset
+ w=127, -- text box width
+ h=21, -- text box height
+ col1=0, -- background color
+ col2=7, -- border color
+ col3=7, -- text color
+ }
 end
+
+function intro_update()  -- this function handles the text box on every frame update.
+ if intro_tb.char<#intro_tb.str[intro_tb.i] then -- if the message has not been processed until it's last character:
+  intro_tb.cur+=1 -- increase the buffer. 0.5 is already max speed for this setup. if you want messages to show slower, set this to a lower number. this should not be lower than 0.1 and also should not be higher than 0.9
+  if intro_tb.cur>0.9 then -- if the buffer is larger than 0.9:
+   intro_tb.char+=1 -- set next character to be drawn.
+   intro_tb.cur=0 -- reset the buffer.
+   if (ord(intro_tb.str[intro_tb.i],intro_tb.char)!=32) sfx(intro_tb.voice) -- play the voice sound effect.
+  end
+  if (btnp(5)) intro_tb.char=#intro_tb.str[intro_tb.i] -- advance to the last character, to speed up the message.
+ elseif btnp(5) then -- if already on the last message character and button ❎/x is pressed:
+  if #intro_tb.str>intro_tb.i then -- if the number of strings to display is larger than the current index (this means that there's another message to display next):
+   intro_tb.i+=1 -- increase the index, to display the next message on tb.str
+   intro_tb.cur=0 -- reset the buffer.
+   intro_tb.char=0 -- reset the character position.
+  else -- if there are no more messages to display:
+   intro=false
+   reading=false -- set reading to false. resumes normal gameplay.
+   init_game()
+  end
+ else print("❎",100,1,1)
+ end
+end
+
+function intro_draw() -- this function draws the text box.
+ cls()
+ if reading 
+ then -- only draw the text box if reading is true, that is, if a text box has been called and tb_() has already happened.
+  print(sub(intro_tb.str[intro_tb.i],1,intro_tb.char),intro_tb.x+2,intro_tb.y+2,intro_tb.col3) -- draw the text.
+ end
+end
+
 __gfx__
 00666666666666600066666666666660006666666666666000666666666666600066666666666660000000000000000000666666666666600000000000000000
 0633bbbbbbbbbbb60633bbbbbbbbbbb60633bbbbbbbbbbb60633bbbbbbbbbbb60633bbbbbbbbbbb600666666666666600633bbbbbbbbbbb60066666666666660
@@ -732,7 +793,7 @@ __sfx__
 b104000024725245001c0001c0001c0001c0001c00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 910900000d654006041a6530060400604006040060400604006040060400604006040060400604006040060400604006040060400604006040060400604006040060400604006040060400604006040000000000
 650500002342000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-b10400000062500000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+4d0400001052500503000030000300003000030000300003000030000300003000030000300003000030000300003000030000300003000030000300003000030000300003000030000300003000030000300003
 011000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 001000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 001000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
