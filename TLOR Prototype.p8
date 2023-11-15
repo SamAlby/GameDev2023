@@ -395,10 +395,12 @@ end
 --text box
 
 function tb_init(voice,string,xoff,yoff) -- this function starts and defines a text box.
+ donetalking=false
  reading=true -- sets reading to true when a text box has been called
  tb={ -- table containing all properties of the text box
  str=string, -- the strings
  voice=voice, -- the voice
+ counter=0,
  i=1, -- index used to tell what string from tb.str to read
  cur=0, -- buffer used to progressively show characters on the text box
  char=0, -- current character to be drawn on the text box
@@ -414,6 +416,7 @@ end
 
 function tb_update()  -- this function handles the text box on every frame update.
  if tb.char<#tb.str[tb.i] then -- if the message has not been processed until it's last character:
+  donetalking=false
   tb.cur+=0.5 -- increase the buffer. 0.5 is already max speed for this setup. if you want messages to show slower, set this to a lower number. this should not be lower than 0.1 and also should not be higher than 0.9
   if tb.cur>0.9 then -- if the buffer is larger than 0.9:
    tb.char+=1 -- set next character to be drawn.
@@ -429,6 +432,7 @@ function tb_update()  -- this function handles the text box on every frame updat
   else -- if there are no more messages to display:
    reading=false -- set reading to false. resumes normal gameplay.
   end
+ else donetalking=true
  end
 end
 
@@ -437,7 +441,11 @@ function tb_draw() -- this function draws the text box.
   rectfill(tb.x,tb.y,tb.x+tb.w,tb.y+tb.h,tb.col1) -- draw the background.
   rect(tb.x,tb.y,tb.x+tb.w,tb.y+tb.h,tb.col2) -- draw the border.
   print(sub(tb.str[tb.i],1,tb.char),tb.x+2,tb.y+2,tb.col3) -- draw the text.
-  print("❎",tb.x+118,tb.y+15,1)
+  if(donetalking) then
+   tb.counter+=1
+   if(tb.counter>=10) print("❎",tb.x+118,tb.y+15,1)
+   if(tb.counter==20) tb.counter=0
+  end
  end
 end
 
@@ -458,6 +466,8 @@ end
 function intro_init()
  intro=true
  reading=true -- sets reading to true when a text box has been called
+ intro_counter=0
+ intro_donetalking = false
  intro_tb={ -- table containing all properties of the text box
  str={
   "[system initialization]\n\nloading motor control modules...\ncalibrating sensor array...\nestablishing comms protocol...\n",
@@ -466,7 +476,7 @@ function intro_init()
   "[sensory system activation]\n\ninitializing visual sensors...\nactivating auditory sensors...\ninitializing tactile sensors...\ncalibrating environment scan...",
   "[sensor array check complete]\n\nsensory systems:\n\n  operational...    check.\n  synchronized...   check.",
   "[processor boot]\n\nbooting cpu...\nloading motor control...\nboot decision-making routines...\ntraining learning algorithms...\nfinalizing neural network...\n",
-  "[error detected]\n\nattempting data recovery...\nscanning corrupted sectors...\nisolating malfunctioning blocks...\nverifying data integrity...\n\n[verification failure]",
+  "[error detected]\n\nattempting data recovery...\nscanning corrupted sectors...\nisolating malfunctions...\nverifying data integrity...\n\n[verification failure]",
   "**critical error**\n\nunable to repair memory drive.\n\ndata corruption exceeds\nrecovery capabilities.\n\nwarning:\nanomalies detected in memory\n\ninitiating diagnostic procedure.",
   "[robotic brain online]\n\nprocessor functions:\n\n optimized...   check.\n ready...       check.",
   "[robot status]\n\nmotor systems...          check.\nsensory systems...        check.\ndecision-making...        ready.\nlearning capabilities...  ready.\n\n[activation complete]",
@@ -488,6 +498,7 @@ end
 
 function intro_update()  -- this function handles the text box on every frame update.
  if intro_tb.char<#intro_tb.str[intro_tb.i] then -- if the message has not been processed until it's last character:
+  intro_donetalking=false
   intro_tb.cur+=1 -- increase the buffer. 0.5 is already max speed for this setup. if you want messages to show slower, set this to a lower number. this should not be lower than 0.1 and also should not be higher than 0.9
   if intro_tb.cur>0.9 then -- if the buffer is larger than 0.9:
    intro_tb.char+=1 -- set next character to be drawn.
@@ -505,15 +516,21 @@ function intro_update()  -- this function handles the text box on every frame up
    reading=false -- set reading to false. resumes normal gameplay.
    init_game()
   end
- else print("❎",100,1,1)
+ else intro_donetalking=true
  end
 end
 
-function intro_draw() -- this function draws the text box.
+function intro_draw() -- this function draws the intro text
  cls()
  if reading 
  then -- only draw the text box if reading is true, that is, if a text box has been called and tb_() has already happened.
   print(sub(intro_tb.str[intro_tb.i],1,intro_tb.char),intro_tb.x+2,intro_tb.y+2,intro_tb.col3) -- draw the text.
+  if intro_donetalking
+  then
+   intro_counter+=1
+   if(intro_counter>=10) print("❎",118,118,1)
+   if(intro_counter==20) intro_counter=0
+  end
  end
 end
 
