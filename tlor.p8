@@ -262,7 +262,6 @@ function init_npcs()
    dy=0,
    w=16,
    h=16,
-   dia_stage=0,
    await_talk=false,
    anim_wait=0.3,
    anim_time=0,
@@ -279,7 +278,7 @@ function init_npcs()
    update=function(self)
     if nearactor(p,self) then
      if (btnp(4)) then
-      handle_dialogue("cara",self.dia_stage)
+      handle_dialogue("cara")
      end
     end
    end,
@@ -321,11 +320,16 @@ function npcs_colliding()
  return colliding
 end
 
-function handle_dialogue(c,cs)
-  if (cs==0) tb_init(1,{"hey you! you're finally\npowered on! i was getting\nworried, you know."},cam_x,cam_y+106)
+function handle_dialogue(c)
   dialogue=true
   sub_mode=1
-  init_menu(cam_x+2,cam_y+102,{cara_options[1][cara_stages[1]],cara_options[2][cara_stages[2]],cara_options[3][cara_stages[3]]})
+  if(c=="cara")then
+   tb_init(1,{"hey you! you're finally\npowered on! i was getting\nworried, you know."},cam_x,cam_y+106)
+   init_menu(cam_x+2,cam_y+102,{cara_options[1][cara_stages[1]],cara_options[2][cara_stages[2]],cara_options[3][cara_stages[3]]})
+  end
+  if c=="klanky" then
+   tb_init(1,{"hey kid, wanna buy\nsome parts?"},cam_x,cam_y+106)
+  end
 end
 
 function handle_response(sel)
@@ -401,6 +405,7 @@ function tb_init(voice,string,xoff,yoff) -- this function starts and defines a t
  str=string, -- the strings
  voice=voice, -- the voice
  counter=0,
+ othercount=0,
  i=1, -- index used to tell what string from tb.str to read
  cur=0, -- buffer used to progressively show characters on the text box
  char=0, -- current character to be drawn on the text box
@@ -417,14 +422,16 @@ end
 function tb_update()  -- this function handles the text box on every frame update.
  if tb.char<#tb.str[tb.i] then -- if the message has not been processed until it's last character:
   donetalking=false
-  tb.cur+=0.4 -- increase the buffer. 0.5 is already max speed for this setup. if you want messages to show slower, set this to a lower number. this should not be lower than 0.1 and also should not be higher than 0.9
+  if (tb.str[tb.i][tb.char]=="," or tb.str[tb.i][tb.char]=="." or tb.str[tb.i][tb.char]=="!") then tb.cur+=.05
+  else tb.cur+=0.4 -- increase the buffer. 0.5 is already max speed for this setup. if you want messages to show slower, set this to a lower number. this should not be lower than 0.1 and also should not be higher than 0.9
+  end
   if tb.cur>0.9 then -- if the buffer is larger than 0.9:
    tb.char+=1 -- set next character to be drawn.
    tb.cur=0 -- reset the buffer.
    if (ord(tb.str[tb.i],tb.char)!=32) sfx(tb.voice) -- play the voice sound effect.
   end
   if (btnp(5)) tb.char=#tb.str[tb.i] -- advance to the last character, to speed up the message.
- elseif btnp(5) then -- if already on the last message character and button ❎/x is pressed:
+ elseif btnp(4) then -- if already on the last message character and button 🅾️/z is pressed:
   if #tb.str>tb.i then -- if the number of strings to display is larger than the current index (this means that there's another message to display next):
    tb.i+=1 -- increase the index, to display the next message on tb.str
    tb.cur=0 -- reset the buffer.
@@ -443,7 +450,7 @@ function tb_draw() -- this function draws the text box.
   print(sub(tb.str[tb.i],1,tb.char),tb.x+2,tb.y+2,tb.col3) -- draw the text.
   if(donetalking) then
    tb.counter+=1
-   if(tb.counter>=30) print("❎",tb.x+118,tb.y+15,1)
+   if(tb.counter>=30) print("🅾️",tb.x+118,tb.y+15,1)
    if(tb.counter==60) tb.counter=0
   end
  end
@@ -455,8 +462,8 @@ function camera_update()
  cam_x=p.x-60
  cam_y=p.y-60
 
- cam_x=mid(0,cam_x,896)
- cam_y=mid(0,cam_y,128)
+ cam_x=mid(0,cam_x,208)
+ cam_y=mid(0,cam_y,0)
 
  --change the camera position
  camera(cam_x,cam_y)
@@ -499,14 +506,14 @@ end
 function intro_update()  -- this function handles the text box on every frame update.
  if intro_tb.char<#intro_tb.str[intro_tb.i] then -- if the message has not been processed until it's last character:
   intro_donetalking=false
-  intro_tb.cur+=1 -- increase the buffer. 0.5 is already max speed for this setup. if you want messages to show slower, set this to a lower number. this should not be lower than 0.1 and also should not be higher than 0.9
+  intro_tb.cur+=2 -- increase the buffer. 0.5 is already max speed for this setup. if you want messages to show slower, set this to a lower number. this should not be lower than 0.1 and also should not be higher than 0.9
   if intro_tb.cur>0.9 then -- if the buffer is larger than 0.9:
    intro_tb.char+=1 -- set next character to be drawn.
    intro_tb.cur=0 -- reset the buffer.
    if (ord(intro_tb.str[intro_tb.i],intro_tb.char)!=32) sfx(intro_tb.voice) -- play the voice sound effect.
   end
   if (btnp(5)) intro_tb.char=#intro_tb.str[intro_tb.i] -- advance to the last character, to speed up the message.
- elseif btnp(5) then -- if already on the last message character and button ❎/x is pressed:
+ elseif btnp(4) then -- if already on the last message character and button 🅾️/z is pressed:
   if #intro_tb.str>intro_tb.i then -- if the number of strings to display is larger than the current index (this means that there's another message to display next):
    intro_tb.i+=1 -- increase the index, to display the next message on tb.str
    intro_tb.cur=0 -- reset the buffer.
@@ -528,7 +535,7 @@ function intro_draw() -- this function draws the intro text
   if intro_donetalking
   then
    intro_counter+=1
-   if(intro_counter>=30) print("❎",118,118,1)
+   if(intro_counter>=30) print("🅾️",118,118,1)
    if(intro_counter==60) intro_counter=0
   end
  end
@@ -812,7 +819,7 @@ d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5
 0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000d5d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d50000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d50000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 __sfx__
-000400000f00502605046050560507605096050b6050c6050e6051060511605136051560517605186051860501605216052160521605216052160521605216051860218602186021860218602186021860218602
+010400000f00502605046050560507605096050b6050c6050e6051060511605136051560517605186051860501605216052160521605216052160521605216051860218602186021860218602186021860218602
 b104000024725245001c0001c0001c0001c0001c00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 910900000d654006041a6530060400604006040060400604006040060400604006040060400604006040060400604006040060400604006040060400604006040060400604006040060400604006040000000000
 650500002342000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
@@ -821,8 +828,8 @@ b104000024725245001c0001c0001c0001c0001c0000000000000000000000000000000000000000
 001000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 001000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 010600002470024700247002470024700247002477224772307723077230772307723077230772307723077230702307020070200702007020070200702007020000000000000000000000000000000000000000
-0f0900000c7270e7271072711727137271572717727187271a7271c7271d7271f7272172723727247272672728727297272b7272d7272f7273072732727347273572737727397273b7273c7003c7003c7003c700
-110600003c7123c7123c7123c7123c7123c7123c7123c7123c7123c7123c7123c7123c7123c7123c7123c7123c7123c7123c7123c7123c7123c7123c7123c7123c7123c7123c7123c7123c7123c7123c7123c712
+290c00000c7270e7271072711727137271572717727187271a7271c7271d7271f7272172723727247272672728727297272b7272d7272f7273072732727347273572737727397273b7273b7273b7273b7273b727
+1106000023750237503c7003c7003c7003c7003c7003c7003c7003c7003c7003c7003c7003c7003c7003c7003c7003c7003c7003c7003c7003c7003c7003c7003c7003c7003c7003c7003c7003c7003c7003c700
 d30c00200000000003000630000000000000633c6633c66300063000000006300000000633c6003c6633c6630000000003000630000000000000633c6633c66300063000000006300000000633c6003c6633c663
 5d0c00201013313133151311513315131111330010117100171331713317131171331713117134171341713417133171331813118133181311813300101171001713317133141311413314131141341413314134
 070c000000503005033956339563005033b5612f5662d56226562245622b503285032d503345032d503355032d503375032d5032f503395030050300503005030050300503005030050300503005030050300503
