@@ -15,12 +15,19 @@ function _draw()
  elseif reading then 
   cls()
   draw_menu()
-  if(main_menu) draw_particles()
+  if(main_menu) then 
+   spr(74,40,30,6,2) 
+   draw_particles() 
+  end
   tb_draw()
  elseif dialogue then 
   p.animate("idle")
+  draw_game()
   draw_dia_menu()
- elseif main_menu then draw_menu() draw_particles()
+ elseif main_menu then  
+  draw_menu() 
+  spr(74,40,30,6,2)
+  draw_particles()
  else draw_game() 
  end
 end
@@ -124,14 +131,18 @@ function update_menu()
   end
  end
  if sub_mode==1 then
+  talkingto.talked=true
   m.options = {}
+  m.amt=1
   add(m.options,talkingto.options[1][talkingto.stages[1]])
-  if(#talkingto.options>1) add(m.options,talkingto.options[2][talkingto.stages[2]])
-  if(#talkingto.options>2) add(m.options,talkingto.options[3][talkingto.stages[3]])
+  if(#talkingto.options>1) m.amt=2 add(m.options,talkingto.options[2][talkingto.stages[2]])
+  if(#talkingto.options>2) m.amt=3 add(m.options,talkingto.options[3][talkingto.stages[3]])
   if btnp(4) and menu_timer>1 then
    if m.options[m.sel]=="*exit*" then dialogue=false
    else tb_init(talkingto.voice,handle_response(talkingto.options[m.sel][talkingto.stages[m.sel]]),cam_x,cam_y+106)
-   if(talkingto.stages[m.sel]<count(talkingto.options[m.sel])) talkingto.stages[m.sel]+=1
+    if(talkingto.name == "klanky") then talkingto.update_choice(talkingto,m.options[m.sel])
+    elseif(talkingto.stages[m.sel]<count(talkingto.options[m.sel])) then talkingto.stages[m.sel]+=1
+    end
    end
   end
  end
@@ -139,6 +150,7 @@ function update_menu()
  col2=pals[palnum][2]
  menu_timer+=1
 end
+
 
 function draw_menu()
  cls(col2)
@@ -318,6 +330,8 @@ p={ --player table
 function init_npcs()
  --cara
  cara={
+   name="cara",
+   talked=false,
    x=188,
    y=42,
    dx=0,
@@ -372,6 +386,8 @@ function init_npcs()
   }
 
   klanky={
+   name="klanky",
+   talked=false,
    x=372,
    y=20,
    dx=0,
@@ -385,9 +401,9 @@ function init_npcs()
    voice=2,
    flipped=false,
    options={
-    {"parts?"," "," "," "},
-    {"where am i?","mechmedics?","spring city?","used to be?"," "},
-    {"*exit*"}
+    {"parts?"," "},
+    {"why do you look like that?"," "},
+    {"*attack him*"," "}
    },
    stages={1,1,1},
    draw=function(self)
@@ -422,9 +438,22 @@ function init_npcs()
    end,
    speak=function(dial)
    	tb_init(2,{dial},cam_x,cam_y+106)
+   end,
+   update_choice=function(self,ch)
+    if(ch=="chrono-encryption unit?") dialogue=false
+    if(ch=="*attack him*") dialogue = false
+    if(ch=="i'm sure") dialogue=false
+    if(ch=="*step back*") dialogue=false
+    if(ch=="not from a murderer!") dialogue = false
+    if(ch=="parts?") self.options={{"i'd like to place an order!"," "},{"i'm not interested"," "}}
+    if(ch=="why do you look like that?") self.options={{"parts?"," "},{"not from a murderer!"," "},{"who do you take from?"," "}}
+    if(ch=="i'm not interested") self.options={{"chrono-encryption unit?"," "},{"i'm sure"," "}}
+    if(ch=="quantum data matrix?") self.options={{"chrono-encryption unit?"," "},{"i'm not interested"," "}}
+    if(ch=="who do you take from?") self.options={{"i'd like to place an order!"," "},{"mostly?"," "},{"*step back*"," "}}
+    if(ch=="i'd like to place an order!") self.options={{"chrono-encryption unit?"," "},{"quantum data matrix?"," "}}
+    if(ch=="mostly?") self.options={{"i'd like to place an order!"," "},{"i'm not interested"," "}}
    end
   }
-
 end
 
 function update_npcs()
@@ -450,14 +479,17 @@ function handle_dialogue(c)
   sub_mode=1
   if(c=="cara")then
    q = cara
-   tb_init(1,{"hey you! you're finally\npowered on! i was getting\nworried, you know."},cam_x,cam_y+106)
+   if(q.talked) then tb_init(1,{"i'm sure you'll find what \nyou're looking for!"},cam_x,cam_y+106)
+   else tb_init(1,{"hey you! you're finally\npowered on! i was getting\nworried, you know."},cam_x,cam_y+106) end
   end
   if c=="klanky" then
    q = klanky
-   tb_init(2,{"hey kid, wanna buy some parts?"},cam_x,cam_y+106)
+   if (q.talked) then tb_init(2,{"go on. scram, kid."},cam_x,cam_y+106)
+   else tb_init(2,{"hey kid, wanna buy some parts?"},cam_x,cam_y+106) end
   end
   talkingto=q
-  init_menu(cam_x+2,cam_y+102,{q.options[1][q.stages[1]],q.options[2][q.stages[2]],q.options[3][q.stages[3]]})
+  if(talkingto.talked) then dialogue=false
+  else init_menu(cam_x+2,cam_y+102,{q.options[1][q.stages[1]],q.options[2][q.stages[2]],q.options[3][q.stages[3]]}) end
 end
 
 function handle_response(sel)
@@ -472,6 +504,18 @@ function handle_response(sel)
   if(sel=="can you fix it?") return {"unfortunately, i don't have the \nrequired parts here with me.","resources are scarce."} 
   if(sel=="used to be?") return {'yeah!','of course, it was only \nconsidered "america" while \nthere were still humans.',"they've been gone for...","gosh...","decades now."} 
   if(sel=="where can i find the parts?") return {"well,","you'll need a new \nchrono-encryption unit \nand a quantum data matrix.","parts like those are hard \nto come by nowadays.","you'll need to venture to \nthe voltoria hub to find \nreplacements.","just go right, \n\nyou can't miss it. :)"}
+  if(sel=="parts?") return {"yessir! i've got all sorts! \nbig, small, old, new...","well, maybe not new. \nslightly used at best.","fair warning, \nany complex parts i'll need \nto put an order in for."}
+  if(sel=="why do you look like that?") return {"oh, right","i suppose my body has \nbecome a sort of patchwork quilt \nover the years.","as new parts stopped being \nmanufactured, i've had to resort \nto scavenging replacements for","worn out parts from \nother robots. ","interested in some parts?"}
+  if(sel=="*attack him*") return {"huh? woah!"}
+  if(sel=="i'm not interested") return {"hmm... are you sure?\nconsider carefully."}
+  if(sel=="i'm sure") return {"well, \nas long as you're sure... ","you do realize you're \nonly useful for one \nthing now, right?"}
+  if(sel=="chrono-encryption unit?") return {"wow, \nthose are in short supply \nthese days!","i can put an order \nin for it, but you'll have \nto do a favor for me."}
+  if(sel=="quantum data matrix?") return {"oh... i actually don't \nhave a connect for those. ","can i interest you \nin anything else?"}
+  if(sel=="not from a murderer!") return {"murderer?? ","i'll have you know \nall my parts are \nethically sourced! ","i'll fucking kill you!!"}
+  if(sel=="who do you take from?") return {"anyone who gets close enough! ","ha ha. just kidding. ","i strip parts from robots \nthat are too worn out \nto function anymore.","mostly."}
+  if(sel=="i'd like to place an order!") return {"lovely!","what part?"}
+  if(sel=="mostly?") return {"listen bud,\ndon't ask questions.","are you buying or not?"}
+  if(sel=="*step back*") return {"oop, get back here, you!"}
   return sel
 end
 -->8
@@ -667,7 +711,8 @@ function intro_init()
   "scanning memory drive...",
   "**critical error**\n\nmemory drive failure.\n\nanomalies detected in memory.\n\ninitiating diagnostic...",
   "corrupted components detected...\n\nestimated system corruption...\n\n\n                         ...37%",
-  "component malfunction detected.\n\n\replacement required.\n\n...initiating emergency boot..."
+  "component malfunction detected.\n\nreplacement required.",
+  "...initiating emergency boot..."
   }, -- the strings
  voice=4, -- the voice
  i=1, -- index used to tell what string from tb.str to read
@@ -755,20 +800,20 @@ __gfx__
 00006266636077007700636663607700077063666260000077006366636077000007726663600000000077667760000000006366626000000000636663600000
 07000600626077000007626062607700077062600600700000076260626077000007760062600000000062606260000000006260060000000000626062600000
 00070700060000000000060006000000000006000700000000000600060000000000070006000000000006000600000000000600070000000000060006000000
-00006677777700000000000000000000000066777777000000000002888000000000000000000000000000000000000000000000000000000000000000000000
-00667711111177000000667777770000006677111111770000000028888800000000000288800000000000000000000000000000000000000000000000000000
-0667111711711170006677111111770006671117117111700000002818a800000000002888880000000000000000000000000000000000000000000000000000
-66711117117111170667111711711170667111171171111700000028888800000000002818a80000000000000000000000000000000000000000000000000000
-66711111111111176671111711711117667111111111111700000002888000000000002888880000000000000000000000000000000000000000000000000000
-6671117111171117667111111111111766711177777711170000b011100000000000000288800000000000000000000000000000000000000000000000000000
-066711177771117066711171111711170667111777711170000b6b88889900000000b01110000000000000000000000000000000000000000000000000000000
-0066771111117700066711177771117000667711111177000006b88880099900000b6b8888990000000000000000000000000000000000000000000000000000
-00006677777700000066771111117700000066777777000000600110000009000006b88880099900000000000000000000000000000000000000000000000000
-00000066666600000000667777770000000000666666000000b08888000c99900060888800000900000000000000000000000000000000000000000000000000
-0000006668660070000700666866000000000066686600700b00e00e00c0999000b0e00e000c9990000000000000000000000000000000000000000000000000
-0000776688867700000077668886770000007766888677000b00e00e0000c0c00b00e00e00009990000000000000000000000000000000000000000000000000
-000700666866000000000066686600700007006668660000060070070000c0c00b0070070000c0c0000000000000000000000000000000000000000000000000
-0000006666660000000000666666000000000066666600000600e00e000000006060e00e00000000000000000000000000000000000000000000000000000000
+00006677777700000000000000000000000066777777000000000002888000000000000000000000555555555550055500000005555555550055555555000000
+00667711111177000000667777770000006677111111770000000028888800000000000288800000555555555550055500000005555555550055555555500000
+0667111711711170006677111111770006671117117111700000002818a800000000002888880000555555555550055500000005555555550055555555500000
+66711117117111170667111711711170667111171171111700000028888800000000002818a80000000055500000055500000005550005550055000055500000
+66711111111111176671111711711117667111111111111700000002888000000000002888880000000055500000055500000005550005550055000005500000
+6671117111171117667111111111111766711177777711170000b011100000000000000288800000000055500000055500000005550005550055000005500000
+066711177771117066711171111711170667111777711170000b6b88889900000000b01110000000000055500000055500000005550005550055000055500000
+0066771111117700066711177771117000667711111177000006b88880099900000b6b8888990000000055500000055500000005550005550055555555500000
+00006677777700000066771111117700000066777777000000600110000009000006b88880099900000055500000055500000005550005550055555555500000
+00000066666600000000667777770000000000666666000000b08888000c99900060888800000900000055500000055500000005550005550055555555000000
+0000006668660070000700666866000000000066686600700b00e00e00c0999000b0e00e000c9990000055500000055500000005550005550055500555000000
+0000776688867700000077668886770000007766888677000b00e00e0000c0c00b00e00e00009990000055500000055555555005555555550055500555000000
+000700666866000000000066686600700007006668660000060070070000c0c00b0070070000c0c0000055500000055555555005555555550055500055500000
+0000006666660000000000666666000000000066666600000600e00e000000006060e00e00000000000055500000055555555005555555550055500055550000
 0000011111111000000001111111100000000111111110000000e00e000000000000e00e00000000000000000000000000000000000000000000000000000000
 00001111111111000000111111111100000011111111110000007707700000000000770770000000000000000000000000000000000000000000000000000000
 00000077777777710000000000000000000999940000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
