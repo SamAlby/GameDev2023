@@ -12,25 +12,23 @@ __lua__
 function _draw()
  cls()
  palbrite(brightness)
- if combat then draw_combat()
- elseif intro then intro_draw()
- elseif reading then 
-  draw_menu()
-  if(main_menu) then 
-   spr(74,40,30,6,2) 
-   draw_particles() 
-  end
-  tb_draw()
+ if intro then intro_draw()
+ elseif combat then draw_combat()
  elseif dialogue then 
-  p.animate("idle")
+  p.animate(p)
   draw_game()
   draw_dia_menu()
  elseif main_menu then  
   draw_menu() 
   spr(74,40,30,6,2)
+  print("developed by: ",9,47,5)
+  print("              sam albanese",5,47,5)
+  print("              oliver meyer",5,53,5)
+  print("              michael shively",5,59,5)
   draw_particles()
  else draw_game()
  end
+ if (reading and not intro) tb_draw()
  if t>0 and t<1.2 then 
   ss_horizbars()
  elseif t>0 then
@@ -40,9 +38,10 @@ end
 
 function _update60()
  t=time()-swapstart
- if combat then update_combat()
- elseif fading then updatefade()
+ 
+ if fading then updatefade()
  elseif intro then intro_update()
+ elseif combat then update_combat()
  elseif reading then tb_update()
  elseif main_menu or dialogue then update_menu()
  else update_game()
@@ -61,7 +60,7 @@ function _init()
  fadecount=0
  sub_mode=0
  main_menu=true
- init_menu(0,50,{"start","controls","exit"})
+ init_menu(0,60,{"start","controls","exit"})
 end
 
 function ss_horizbars()
@@ -120,6 +119,7 @@ function draw_options()
   oset=i*8
   if i==m.sel then
    rectfill(cx,m.y+oset-1,cx+36,m.y+oset+5,col1)
+   print("🅾️",cx+108,m.y+oset,0)
    print(m.options[i],cx+2,m.y+oset,col2)
   else
    print(m.options[i],m.x+2,m.y+oset,col1)
@@ -128,7 +128,20 @@ function draw_options()
 end
 
 function draw_dia_options()
- p.draw()
+ p.draw(p)
+ for i=1, m.amt do
+  oset=i*6.40
+  if i==m.sel then
+   rectfill(cx,m.y+oset-1,cx+116,m.y+oset+5,col1)
+   print("🅾️",cx+108,m.y+oset,0)
+   print(m.options[i],cx+1,m.y+oset,col2)
+  else
+   print(m.options[i],m.x,m.y+oset,col1)
+  end
+ end
+end
+
+function draw_combat_options()
  for i=1, m.amt do
   oset=i*6.40
   if i==m.sel then
@@ -191,6 +204,20 @@ function update_menu()
    end
   end
  end
+ if sub_mode==2 then
+  if btnp(4) and
+  menu_timer>1 then
+   if m.options[m.sel]=="attack" then
+    tb_init(talkingto.voice,{"hehehaha"},cam_x,cam_y+106)
+   end
+   if m.options[m.sel]=="reason" then
+  	 tb_init(talkingto.voice,{"bruh"},cam_x,cam_y+106)
+   end
+   if m.options[m.sel]=="action" then
+  	 tb_init(talkingto.voice,{"bruh"},cam_x,cam_y+106)
+   end
+  end
+ end
  col1=pals[palnum][1]
  col2=pals[palnum][2]
  menu_timer+=1
@@ -208,17 +235,25 @@ function draw_dia_menu()
   draw_dia_options()
  end
 end
+
+function draw_combat_menu()
+ if combat then
+  rectfill(tb.x,tb.y,tb.x+tb.w,tb.y+tb.h,tb.col1) -- draw the background.
+  rect(tb.x,tb.y,tb.x+tb.w,tb.y+tb.h,tb.col2) -- draw the border.
+  draw_combat_options()
+ end
+end
 -->8
 --game
 function update_game()
- p.update() -- anims & movement
+ p.update(p) -- anims & movement
  update_npcs()
  end
 
 function draw_game()
  camera_update()
  map(0)
- p.draw()
+ p.draw(p)
  draw_npcs()
 end
 
@@ -292,15 +327,16 @@ p={ --player table
  stage=0, --numerical sprite modifier
  flipped=true,
  hitbox={x=0,y=0,w=15,h=15},
+ anim_state=0,
  state="idle", --string describing animation
  draw=function(self)
-  if(reading) p.state="idle"
-  p.animate(p.state)
-  if(p.flipped)
+  if(reading) self.state="idle"
+  self.animate(self)
+  if(self.flipped)
   then
-   spr(p.state,p.x,p.y,2,2,true,false)
+   spr(self.anim_state,self.x,self.y,2,2,true,false)
   else
-   spr(p.state,p.x,p.y,2,2,false,false)
+   spr(self.anim_state,self.x,self.y,2,2,false,false)
   end
  end,
  update=function(self)
@@ -348,24 +384,24 @@ p={ --player table
   p.x+=p.dx
   p.y+=p.dy
  end,
- animate=function(state)
-  if(time()-p.anim_time>p.anim_wait)
+ animate=function(self)
+  if(time()-self.anim_time>self.anim_wait)
   then 
-   p.stage+=2
-   p.anim_time=time()
-   if p.stage>6
+   self.stage+=2
+   self.anim_time=time()
+   if self.stage>6
    then 
-   p.stage=0
+   self.stage=0
    end
   end
-  if state=="idle"
-  then p.state=0+p.stage 
-  elseif state=="runside"
-  then p.state=8+p.stage
-  elseif state=="runup"
-  then p.state=40+p.stage
-  elseif state=="rundown"
-  then p.state=32+p.stage
+  if self.state=="idle"
+  then self.anim_state=0+self.stage 
+  elseif self.state=="runside"
+  then self.anim_state=8+self.stage
+  elseif self.state=="runup"
+  then self.anim_state=40+self.stage
+  elseif self.state=="rundown"
+  then self.anim_state=32+self.stage
   end
  end
 }
@@ -665,7 +701,6 @@ function tb_update()  -- this function handles the text box on every frame updat
 end
 
 function tb_draw() -- this function draws the text box.
- if(not main_menu) draw_game()
  if reading then -- only draw the text box if reading is true, that is, if a text box has been called and tb_() has already happened.
   rectfill(tb.x,tb.y,tb.x+tb.w,tb.y+tb.h,tb.col1) -- draw the background.
   rect(tb.x,tb.y,tb.x+tb.w,tb.y+tb.h,tb.col2) -- draw the border.
@@ -824,7 +859,7 @@ end
 -->8
 --combat
 function draw_combat()
- if(t<=1.15) 
+ if(t<=1.2) 
  then 
   draw_game()
  else
@@ -838,27 +873,55 @@ function draw_combat()
  	  end
  	 end
  	end
- end
  defender.draw(defender)
- defender.animate("idle")
+ defender.animate(defender)
  fighter.draw(fighter)
  fighter.animate(fighter)
+ end
+ if(t>=2.4) then
+  draw_combat_menu()
+  --hp bar
+  rectfill(cam_x,cam_y,cam_x+127,cam_y+21,0) -- draw the background.
+  rect(cam_x,cam_y,cam_x+127,cam_y+21,7) -- draw the border.
+ end
 end
 
 function update_combat()
  if(k==31) then k=0 else k+=.5 end
+ if(not reading and (t>=2.4)) then update_menu()
+ elseif(reading) then tb_update()
+ end
 end
 
 function init_combat(ch)
+ precombat=false
  combat=true
- transition=true
  k=0
- fighter=ch
- defender=p
+ fighter=deepcopy(ch)
+ defender=deepcopy(p)
+ defender.flipped=false
  defender.x=cam_x+16
  defender.y=cam_y+62
+ fighter.flipped=true
  fighter.x=cam_x+94
  fighter.y=cam_y+62
+ sub_mode=2
+ init_menu(cam_x+2,cam_y+102,{"attack","reason","action"})
+end
+
+function deepcopy(orig)
+    local orig_type = type(orig)
+    local copy
+    if orig_type == 'table' then
+        copy = {}
+        for orig_key, orig_value in next, orig, nil do
+            copy[deepcopy(orig_key)] = deepcopy(orig_value)
+        end
+        setmetatable(copy, deepcopy(getmetatable(orig)))
+    else -- number, string, boolean, etc
+        copy = orig
+    end
+    return copy
 end
 __gfx__
 00666666666666600066666666666660006666666666666000666666666666600066666666666660000000000000000000666666666666600000000000000000
@@ -1138,10 +1201,10 @@ d5d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2
 d5d2d2d2d2d2d2e2d2d2d2d2d2d2d2d2e2d2d2e2d2d2d2d2e2d2d2d2d2d2d2d2d2d2e2d2d2d2d2d2d5000000d5eaf5f7f5f7f5f5f5f5f5f5f5f5f7f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f3
 d5d2e2d2d2d2d2d2d2d2d2d2e2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2e2d2d2d2d2d2d2d2d2d2d2d2d5000000d5d5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f7f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f3
 d5d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d5000000d5daf5f5f5f5f5f5f5f7f5f5f5f5f5f5f5f5f5f5f5f8f5f5f5f5f5f8f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f3
-d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5000000d5d5f4f4f4f4f4f4f4f4dad5dbd5f5f5eadbebd5f4f4f4f4f4f4f4f4f4f4f4f4f4f4f4f4f4f4f4f4f4f4f4f4f4f4f4f4f4f4f4f4f4f4f4f4f4f4f4f4f4f4f4f4f4f4f4f4f4f4f4f4f4f4f4f4f4f4f4f4f4f4f4f3
-00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000f3f3f3f3f3f3f3f3f3f3f3d5d2d2d5f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3
-000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000f3d2d2f300000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000f3f3f3f300000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5000000d5d5f4f4f4f4f4f4f4f4dad5dbd5f5f5f5f5eadbebd5f4f4f4f4f4f4f4f4f4f4f4f4f4f4f4f4f4f4f4f4f4f4f4f4f4f4f4f4f4f4f4f4f4f4f4f4f4f4f4f4f4f4f4f4f4f4f4f4f4f4f4f4f4f4f4f4f4f4f4f4f4f3
+00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000f3f3f3f3f3f3f3f3f3f3f3d5d2d2d2d2d5f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3
+000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000f3d2d2d2d2f30000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000f3f3f3f3f3f30000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 0000d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5000000d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 0000d5d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d5d2d2d2d5000000d5d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d5000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 0000d5d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d5d2d2d2d5000000d5d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d5000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
@@ -1167,13 +1230,13 @@ b104010024725245001c0001c0001c0001c0001c0000000000000000000000000000000000000000
 490e00200010000100051200512000100001000512000100001000010005120051200010000100051200010000100001000512000100001000010005120051200010000100051200010000100001000512005120
 010600000055002551045510555107551095510b5510c551006120061200612006120061200612006120061200612006120061200612006120061200612006120061200612006120061202611046110561100000
 9b0c001036600366003662336600005233662336600005233662336600005233662136621366002f6233062529600366003660036600366003c60036600366003c6033c6033c6033c6033c6033c6033c60300003
-a70c00100052300523005230050300503005233062200523005230050300503005000052300523306220050000500005003c5000050000500005003c500005000050000500005000050000000000000000000000
+a70c001000523005230052300503005030052330633005230052300503005030050000523005233063330600005003c5000050000500005003c50000500005000050000500005000000000000000000000000000
 0d0c0020100131301309112091130911205013001001710017013170130b1120b1130b1120b1140b0130b11418013180130c1120c1130c1120c01300100171001701317013081120811308112081140801308114
 550c00201121313213152111521315211112130c20017200172131721317212172131721217214172131721418213182131821218213182121821318200172001721317213142121421314212142141421314214
 180e00002452024520245202452024520245202452024520245202452024520245202452024520245202452029520295202952029520295202952029520295202952029520295202952029520295202952029520
-251000200c0530d0530c0530d0530c0530d0530c0530d0530c0530d0530c0530d0530c0530d0530c0530d0530c0530d0530c0530d0530c0530d0530c0530d0530c0530d0530c0530d0530c0530d0530c0530d053
+bf1000200c1330d1330c1330d1330c1330d1330c1330d1330c1330d1330c1330d1330c1330d1330c1330d1330c1330d1330c1330d1330c1330d1330c1330d1330c1330d1330c1330d1330c1330d1330c1330d133
 4b1000080007300000000733b6003b6553b6000000000073006000060000600006000060000600006000060000600006000060000600006000060000600006000060000000000000000000000000000000000000
-7a1000102317123171231712317123171231712317123171001010010100101001010010100101001010010100101001010010100101001010010100101001010010100101001010010100101000000000000000
+cb1000102323123231232312323123231232312323123231002010020100201002010020100201002010020100201002010020100201002010020100201002010020100201002010020100201002000020000200
 910e0000200200000000000000001f0200000020020000001802000000000000000018020000000000000000180200000000000000001802000000000001a0201b0200000018020000001b020000001d02000000
 052000201502010020150201002015020100201502010020150200e020150200e020150200e020150200e020130200c020130200c020130200c020130200c02012022120220b02012022120220b0201202212022
 001000201302016020130201702013020160201702013020160201302017020130201602017020130201102014020110201502011020140201502011020140201102015020110201402015020110201402011020
@@ -1228,7 +1291,7 @@ __music__
 00 0b0c0d4c
 00 0b0d4a0c
 00 0b0d4a0c
-00 1e0b1f0c
+00 5e0b1f0c
 00 0b5e200c
 00 0b0c2021
 00 0b0c2261
