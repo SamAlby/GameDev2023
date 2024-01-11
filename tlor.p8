@@ -31,7 +31,7 @@ function _draw()
  if (reading and not intro) tb_draw()
  if t>0 and t<1.2 then 
   ss_horizbars()
- elseif t>0 then
+ elseif t>0 and t<10 then
   ss_vertbars()
  end
 end
@@ -49,6 +49,9 @@ function _update60()
 end
 
 function _init()
+ playerattacked=false
+ skipend=false
+ changevoice=-1
  continuemusic=false
  attacking=false
  swapstart=-10
@@ -188,7 +191,7 @@ function update_menu()
   if btnp(4) and menu_timer>1 then
    if m.options[m.sel]=="*exit*" then dialogue=false
    else tb_init(talkingto.voice,handle_response(talkingto.options[m.sel][talkingto.stages[m.sel]]),cam_x,cam_y+106)
-    if(talkingto.name == "klanky") then talkingto.update_choice(talkingto,m.options[m.sel])
+    if(talkingto.name != "cara" and talkingto.name != "gnome") then talkingto.update_choice(talkingto,m.options[m.sel])
     elseif(talkingto.stages[m.sel]<count(talkingto.options[m.sel])) then talkingto.stages[m.sel]+=1
     end
    end
@@ -196,20 +199,61 @@ function update_menu()
  end
  if sub_mode==2 then
   if btnp(4) and menu_timer>1 then
+   if m.options[m.sel]=="hug" then
+  	 tb_init(1,{"you ran up to give klanky a hug","what the- hey!\noh.. thanks kid."},cam_x,cam_y+106) changevoice=2 fighter.favor+=5
+     playerattacked=true
+   end
+   if m.options[m.sel]=="high-five" then
+  	 tb_init(1,{"you put your hand up to \ngive klanky a high five!","... he left you hanging."},cam_x,cam_y+106) fighter.favor+=2
+     playerattacked=true
+   end
+   if m.options[m.sel]=="hurt" then
+  	 tb_init(1,{"you told klanky that his arms \nlook dumb.","wh- hey! nuh uh!"},cam_x,cam_y+106) changevoice=2 fighter.favor-=5
+     playerattacked=true
+   end
+   if m.options[m.sel]=="bribe" then
+  	 tb_init(1,{"you started flashing stacks","he flashes racks right back!","very impressive...\n\nfor a pipsqueak!"},cam_x,cam_y+106) changevoice=4 fighter.favor+=2
+     playerattacked=true
+   end
+   if m.options[m.sel]=="brag" then
+  	 tb_init(1,{"you gloated about still having \nyour lower jaw.","hey! that was a traumatic \nexperience! not cool!"},cam_x,cam_y+106) changevoice=4 fighter.favor-=5
+     playerattacked=true
+   end
+   if m.options[m.sel]=="beatbox" then
+  	 pdmg=2 tb_init(1,{"you started beatboxing.","cranky starts beatboxing too!","a full-blown beatbox battle\nensues before your superior\nvibrations knock him down!","you dealt 2 damage!","well, well... you can beatbox,\nbig deal!"},cam_x,cam_y+106) fighter.favor+=5 changevoice=4
+     playerattacked=true
+   end
+   if m.options[m.sel]=="poke" then
+    enemydmg=flr(rnd(talkingto.attackpower)+1)
+  	tb_init(1,{"you walk forward and \npoke cara.","cara attacks you!","you took "..enemydmg.." points of damage."},cam_x,cam_y+106) 
+    playerattacked=true
+   end
+   if m.options[m.sel]=="plead" then
+  	tb_init(1,{"you plead with cara to \nstop being evil.","...she gives no response."},cam_x,cam_y+106) fighter.favor+=2
+    playerattacked=true
+   end
+   if m.options[m.sel]=="question" then
+  	tb_init(1,{"you begin to ask cara a\nquestion.","i'm not your tutorial bot\nanymore! enough games!"},cam_x,cam_y+106) fighter.favor-=2
+    playerattacked=true
+   end
    if m.options[m.sel]=="attack" then
     if(attack(p,talkingto)) then pdmg=flr(rnd(p.attackpower)+1) tb_init(1,{"you attacked "..talkingto.name.." and...","you hit!","you dealt "..pdmg.." points of damage!"},cam_x,cam_y+106)
-    else tb_init(1,{"you attacked "..talkingto.name.." and...","you missed!"},cam_x,cam_y+106) end
-    player_turn=false
+    else tb_init(1,{"you attacked "..talkingto.name.." and...","you missed!"},cam_x,cam_y+106) 
+    end
+    playerattacked=true
    end
    if m.options[m.sel]=="reason" then
-  	 tb_init(talkingto.voice,{"you attempted to reason with "..talkingto.name},cam_x,cam_y+106)
-     player_turn=false
+  	 if(attack(p,talkingto)) then pdmg=flr(rnd(p.attackpower)+1) tb_init(1,{"you attempted to reason with \n"..talkingto.name.." and..","they seem to be affected"},cam_x,cam_y+106) fighter.favor+=2
+     else tb_init(1,{"you attempted to reason with "..talkingto.name.." and...","you failed."},cam_x,cam_y+106) tb_init(talkingto.voice,{""},cam_x,cam_y+106) 
+     end
+     playerattacked=true
    end
    if m.options[m.sel]=="action" then
-  	 tb_init(talkingto.voice,{""},cam_x,cam_y+106)
-     player_turn=false
+  	 m.options=talkingto.actions
+     menu_timer+=1
    end
   end
+  if(btnp(❎) and menu_timer>1) m.options={"attack","reason","action"}
  end
  col1=pals[palnum][1]
  col2=pals[palnum][2]
@@ -364,17 +408,23 @@ p={ --player table
   --more collisions
   if (p.dx!=0) then
    --tb_init(1,{"woops! the game developer\nhasn't finished this area yet!","come back later, mkay? ;)"},cam_x,cam_y+106)
-   if (hitx(1,p.x+p.dx,p.y,p.w,p.h) or hity(1,p.x+p.dx,p.y,p.w,p.h)) continuemusic=false switch_stage(stages.outside) stages.maze.px=8 stages.maze.py=204
+   if (hitx(1,p.x+p.dx,p.y,p.w,p.h) or hity(1,p.x+p.dx,p.y,p.w,p.h)) continuemusic=false switch_stage(stages.outside) stages.maze.px=8 stages.maze.py=204 stages.gnomeland.px=520 stages.gnomeland.py=152
    if (hitx(2,p.x+p.dx,p.y,p.w,p.h) or hity(2,p.x+p.dx,p.y,p.w,p.h)) continuemusic=false switch_stage(stages.mechmedics)
    if (hitx(3,p.x+p.dx,p.y,p.w,p.h) or hity(3,p.x+p.dx,p.y,p.w,p.h)) continuemusic=false switch_stage(stages.maze) stages.outside.px=469 stages.outside.py=112
    if (hitx(4,p.x+p.dx,p.y,p.w,p.h) or hity(4,p.x+p.dx,p.y,p.w,p.h)) continuemusic=true switch_stage(stages.maze2) stages.maze.px=224 stages.maze.py=232
+   if (hitx(5,p.x+p.dx,p.y,p.w,p.h) or hity(5,p.x+p.dx,p.y,p.w,p.h)) continuemusic=false switch_stage(stages.gnomeland) stages.outside.px=776 stages.outside.py=112
+   if (hitx(6,p.x+p.dx,p.y,p.w,p.h) or hity(6,p.x+p.dx,p.y,p.w,p.h)) continuemusic=false switch_stage(stages.finalroom) stages.outside.px=1000 stages.outside.py=80
+   if (hitx(7,p.x+p.dx,p.y,p.w,p.h) or hity(7,p.x+p.dx,p.y,p.w,p.h)) continuemusic=true switch_stage(stages.gnomeland2) stages.gnomeland.px=656 stages.gnomeland.py=248
    if (colliding or hitx(0,p.x+p.dx,p.y,p.w,p.h) or hity(0,p.x+p.dx,p.y,p.w,p.h)) p.dx=0
   end
   if (p.dy!=0) then
-   if (hitx(1,p.x,p.y+p.dy,p.w,p.h) or hity(1,p.x,p.y,p.w,p.h)) continuemusic=false switch_stage(stages.outside) stages.maze.px=8 stages.maze.py=204
+   if (hitx(1,p.x,p.y+p.dy,p.w,p.h) or hity(1,p.x,p.y+p.dy,p.w,p.h)) continuemusic=false switch_stage(stages.outside) stages.maze.px=8 stages.maze.py=204 stages.gnomeland.px=520 stages.gnomeland.py=152
    if (hitx(2,p.x,p.y+p.dy,p.w,p.h) or hity(2,p.x,p.y+p.dy,p.w,p.h)) continuemusic=false switch_stage(stages.mechmedics)
    if (hitx(3,p.x,p.y+p.dy,p.w,p.h) or hity(3,p.x,p.y+p.dy,p.w,p.h)) continuemusic=false switch_stage(stages.maze) stages.outside.px=469 stages.outside.py=112
    if (hitx(4,p.x,p.y+p.dy,p.w,p.h) or hity(4,p.x,p.y+p.dy,p.w,p.h)) continuemusic=true switch_stage(stages.maze2) stages.maze.px=224 stages.maze.py=232
+   if (hitx(5,p.x,p.y+p.dy,p.w,p.h) or hity(5,p.x,p.y+p.dy,p.w,p.h)) continuemusic=false switch_stage(stages.gnomeland) stages.outside.px=776 stages.outside.py=112
+   if (hitx(6,p.x,p.y+p.dy,p.w,p.h) or hity(6,p.x,p.y+p.dy,p.w,p.h)) continuemusic=false switch_stage(stages.finalroom) stages.outside.px=1000 stages.outside.py=80
+   if (hitx(7,p.x,p.y+p.dy,p.w,p.h) or hity(7,p.x,p.y+p.dy,p.w,p.h)) continuemusic=true switch_stage(stages.gnomeland2) stages.gnomeland.px=656 stages.gnomeland.py=248
    if (colliding or hity(0,p.x,p.y+p.dy,p.w,p.h) or hitx(0,p.x,p.y+p.dy,p.w,p.h)) p.dy=0
   end
   p.x+=p.dx
@@ -422,8 +472,8 @@ function init_npcs()
    voice=1,
    flipped=true,
    options={
-    {"who are you?","carebot?","how do you pronounce cara?"},
-    {"where am i?","mechmedics?","spring city?","used to be?"},
+    {"who are you?","carebot?","how do you pronounce cara?"," "},
+    {"where am i?","mechmedics?","spring city?","used to be?"," "},
     {"how long was i out?","i can't remember anything!","can you fix it?","where can i find the parts?","*exit*"}
    },
    stages={1,1,1},
@@ -455,26 +505,83 @@ function init_npcs()
     if (self.stage>4) self.stage=0
     end
     self.state=64+self.stage
-   end,
-   speak=function(dial)
-   	tb_init(1,{dial},cam_x,cam_y+106)
    end
-  }
+ }
 
-  klanky={
+ evilcara={
+   name="evilcara",
+   talked=false,
+   x=992,
+   y=208,
+   dx=0,
+   dy=0,
+   w=16,
+   h=16,
+   --combat stuff
+   favor=0,
+   sparetext={"why won't you just fight me?","i'm literally evil!","i'm... evil?","what is going on?\nwhy did it happen this way?","thank you for sparing me,\nbut i think it's best if\ni just shut down.","goodbye."},
+   reasondc=17, --difficulty to reason with (d20 has to hit at or above this)
+   actions={"poke","plead","question"}, --options when pressing the action button during combat
+   health=25, --hp, self explanatory
+   armorclass=16, --dnd ac
+   attackpower=6, --time between next animation update
+   anim_wait=0.4, --living variable storing time() iterations for updating animations
+   anim_time=0,
+   anim_wait=0.15,
+   anim_time=0,
+   anim_state="idle",
+   state=106,
+   stage=0,
+   voice=1,
+   flipped=true,
+   options={
+    {"hwut"," "},
+    {"bad?"," "},
+    {"evil?"," "}
+   },
+   stages={1,1,1},
+   draw=function(self)
+    if(not beatup) spr(106,self.x,self.y,2,2,self.flipped,false)
+    if(beatup) spr(66,self.x,self.y,2,2,self.flipped,false)
+    if nearactor(p,self)
+    then
+     if(not reading) 
+     then 
+      if(not beatup and not combat) then
+       spr(96,self.x+7,self.y-9,2,2,false,false)
+       print('🅾️', self.x+14, self.y-8,1)
+      end
+     end
+    end
+   end,
+   update=function(self)
+    if(self.talked) self.beatup=true
+    if nearactor(p,self) then
+     if (btnp(4)) then
+      handle_dialogue("evilcara")
+     end
+    end
+   end,
+   animate=function(self)
+   end
+ }
+
+ klanky={
    name="klanky",
    talked=false,
    --position variables
-   x=372,
-   y=20,
+   x=648,
+   y=48,
    dx=0,
    dy=0,
    --width and height in pixels for collisions
    w=16,
    h=16,
    --combat stuff
+   favor=0,
+   sparetext={"you know, kid...","i was gonna tear you up\nfor scrap, but something\nseems different about you.","i think we can set aside\nour differences.","thanks, kid."},
    reasondc=15, --difficulty to reason with (d20 has to hit at or above this)
-   actions={"hug","agitate","*"}, --options when pressing the action button during combat
+   actions={"hug","high-five","hurt"}, --options when pressing the action button during combat
    health=5, --hp, self explanatory
    armorclass=11, --dnd ac
    attackpower=2, --time between next animation update
@@ -532,9 +639,6 @@ function init_npcs()
       self.state=110+self.stage
     end
    end,
-   speak=function(dial)
-   	tb_init(2,{dial},cam_x,cam_y+106)
-   end,
    update_choice=function(self,ch)
     if(ch=="chrono-encryption unit?") dialogue=false
     if(ch=="*attack him*") dialogue=false precombat=true
@@ -549,9 +653,8 @@ function init_npcs()
     if(ch=="i'd like to place an order!") self.options={{"chrono-encryption unit?"," "},{"quantum data matrix?"," "}}
     if(ch=="mostly?") self.options={{"i'd like to place an order!"," "},{"i'm not interested"," "}}
    end
-  }
+ }
 
---TODO FIX THIS GUY
   cranky={
    name="cranky",
    talked=false,
@@ -564,11 +667,13 @@ function init_npcs()
    w=16,
    h=16,
    --combat stuff
+   favor=0,
+   sparetext={"i don't say this very often,\nbut man, i'm impressed.","let's just wrap this whole \nthing up, yeah?"},
    reasondc=15, --difficulty to reason with (d20 has to hit at or above this)
-   actions={"hug","agitate","*"}, --options when pressing the action button during combat
+   actions={"bribe","brag","beatbox"}, --options when pressing the action button during combat
    health=10, --hp, self explanatory
    armorclass=14, --dnd ac
-   attackpower=2, --time between next animation update
+   attackpower=4, --time between next animation update
    anim_wait=0.4, --living variable storing time() iterations for updating animations
    anim_time=0,
    beatup=false,
@@ -577,9 +682,9 @@ function init_npcs()
    voice=4, --sfx tag for sound when they speak
    flipped=false, --whether to flip the sprite or not
    options={ --living table that updates through the progression of dialogue
-    {"parts?"," "},
-    {"why do you look like that?"," "},
-    {"*attack him*"," "}
+    {"yup, suck it nerd"," "},
+    {"wasn't hard at all"," "},
+    {"took me awhile"," "}
    },
    stages={1,1,1}, --stages table from cara dialogue, required for compatibility
    draw=function(self) --draw function that runs every _draw iteration
@@ -589,8 +694,8 @@ function init_npcs()
     then
      self.animate(self)
      if(reading) then if(not donetalking) self.animate(self)
-     else
-      spr(96,self.x+7,self.y-9,2,2,false,false)
+     elseif(not combat) then
+      spr(96,self.x+7,self.y-9,2,2,false,false) -- draw text bubble
       print('🅾️', self.x+14, self.y-8,1)
      end
     end
@@ -598,12 +703,12 @@ function init_npcs()
    update=function(self) --update function that runs every _update iteration
     if nearactor(p,self) then
      if (btnp(4)) then
-      handle_dialogue("klanky")
+      handle_dialogue("cranky")
      end
     end
    end,
    animate=function(self)
-    if(p.x <= self.x) then self.flipped=true
+    if(p.x >= self.x) then self.flipped=true
     else self.flipped=false end
     if(not self.beatup) then
      if (time()-self.anim_time>self.anim_wait)
@@ -623,22 +728,144 @@ function init_npcs()
       self.state=108+self.stage
     end
    end,
-   speak=function(dial)
-   	tb_init(2,{dial},cam_x,cam_y+106)
+   update_choice=function(self,ch)
+    if(ch=="yup, suck it nerd") dialogue=false precombat=true
+    if(ch=="wasn't hard at all") self.options={{"i need parts"," "},{"i'm sooo awesome"," "},{"you're ugly"," "}}
+    if(ch=="took me awhile") self.options={{"chrono-encryption unit"," "}}
+    if(ch=="i need parts") self.options={{"chrono-encryption unit"," "}}
+    if(ch=="i'm sooo awesome") self.options={{"chrono-encryption unit"," "}}
+    if(ch=="you're ugly") dialogue=false precombat=true
+    if(ch=="chrono-encryption unit") self.options={{"i'm open to work"," "},{"kill you for it"," "}}
+    if(ch=="i'm open to work") dialogue=false
+    if(ch=="kill you for it") self.favor=-1000 dialogue=false precombat=true skipend=true
+   end
+  }
+   
+  gnome={
+   name="gnome",
+   talked=false,
+   --position variables
+   x=509,
+   y=291,
+   dx=0,
+   dy=0,
+   --width and height in pixels for collisions
+   w=16,
+   h=16,
+   --combat stuff
+   favor=0,
+   reasondc=15, --difficulty to reason with (d20 has to hit at or above this)
+   actions={"bribe","brag","beatbox"}, --options when pressing the action button during combat
+   health=10, --hp, self explanatory
+   armorclass=14, --dnd ac
+   attackpower=2, --time between next animation update
+   anim_wait=0.4, --living variable storing time() iterations for updating animations
+   anim_time=0,
+   beatup=false,
+   state=98, --sprite number for the character
+   stage=0, --modifier that progresses animation
+   voice=3, --sfx tag for sound when they speak
+   flipped=false, --whether to flip the sprite or not
+   options={ --living table that updates through the progression of dialogue
+    {"got parts?","*exit*"," "},
+    {"nice tunes","*exit*"," "},
+    {"look like a gnome","*exit*"," "}
+   },
+   stages={1,1,1}, --stages table from cara dialogue, required for compatibility
+   draw=function(self) --draw function that runs every _draw iteration
+    spr(self.state,self.x,self.y,1,2,self.flipped,self.beatup)
+    if nearactor(p,self)
+    then
+     self.animate(self)
+     if(reading) then if(not donetalking) self.animate(self)
+     else
+      spr(96,self.x+7,self.y-9,2,2,false,false) -- draw text bubble
+      print('🅾️', self.x+14, self.y-8,1)
+     end
+    end
+   end,
+   update=function(self) --update function that runs every _update iteration
+    if nearactor(p,self) then
+     if (btnp(4)) then
+      handle_dialogue("gnome")
+     end
+    end
+   end,
+   animate=function(self)
+    if(p.x <= self.x) then self.flipped=true
+    else self.flipped=false end
+    if (time()-self.anim_time>self.anim_wait)
+    then 
+     self.stage+=1
+     self.anim_time=time()
+     if (self.stage>1) self.stage=0
+    end
+    self.state=98+self.stage
    end,
    update_choice=function(self,ch)
-    if(ch=="chrono-encryption unit?") dialogue=false
-    if(ch=="*attack him*") dialogue=false precombat=true
-    if(ch=="i'm sure") dialogue=false precombat=true
-    if(ch=="*step back*") dialogue=false precombat=true
-    if(ch=="not from a murderer!") dialogue = false precombat=true
-    if(ch=="parts?") self.options={{"i'd like to place an order!"," "},{"i'm not interested"," "}}
-    if(ch=="why do you look like that?") self.options={{"parts?"," "},{"not from a murderer!"," "},{"who do you take from?"," "}}
-    if(ch=="i'm not interested") self.options={{"chrono-encryption unit?"," "},{"i'm sure"," "}}
-    if(ch=="quantum data matrix?") self.options={{"chrono-encryption unit?"," "},{"i'm not interested"," "}}
-    if(ch=="who do you take from?") self.options={{"i'd like to place an order!"," "},{"mostly?"," "},{"*step back*"," "}}
-    if(ch=="i'd like to place an order!") self.options={{"chrono-encryption unit?"," "},{"quantum data matrix?"," "}}
-    if(ch=="mostly?") self.options={{"i'd like to place an order!"," "},{"i'm not interested"," "}}
+   end
+  }
+  
+  squeak={
+   name="squeak",
+   talked=true,
+   --position variables
+   x=208,
+   y=168,
+   dx=0,
+   dy=0,
+   --width and height in pixels for collisions
+   w=8,
+   h=8,
+   --combat stuff
+   favor=0,
+   reasondc=15, --difficulty to reason with (d20 has to hit at or above this)
+   actions={"bribe","brag","beatbox"}, --options when pressing the action button during combat
+   health=10, --hp, self explanatory
+   armorclass=14, --dnd ac
+   attackpower=2, 
+   anim_wait=0.4, --time between next animation update
+   anim_time=0, --living variable storing time() iterations for updating animations
+   beatup=false,
+   state=120, --sprite number for the character
+   stage=0, --modifier that progresses animation
+   voice=3, --sfx tag for sound when they speak
+   flipped=false, --whether to flip the sprite or not
+   options={ --living table that updates through the progression of dialogue
+    {":)"," "},
+   },
+   stages={1,1,1}, --stages table from cara dialogue, required for compatibility
+   draw=function(self) --draw function that runs every _draw iteration
+    spr(self.state,self.x,self.y,1,1,self.flipped,false)
+    if nearactor(p,self)
+    then
+     self.animate(self)
+     if(reading) then if(not donetalking) self.animate(self)
+     else
+      spr(96,self.x+7,self.y-9,2,2,false,false) -- draw text bubble
+      print('🅾️', self.x+14, self.y-8,1)
+     end
+    end
+   end,
+   update=function(self) --update function that runs every _update iteration
+    if nearactor(p,self) then
+     if (btnp(4)) then
+      handle_dialogue("squeak")
+     end
+    end
+   end,
+   animate=function(self)
+    if(p.x <= self.x) then self.flipped=true
+    if (time()-self.anim_time>self.anim_wait)
+     then 
+      self.stage+=1
+      self.anim_time=time()
+      if (self.stage>1) self.stage=0
+     end
+    self.state=120+self.stage
+    end
+   end,
+   update_choice=function(self,ch)
    end
   }
 end
@@ -646,17 +873,29 @@ end
 function update_npcs()
  cara:update(cara)
  klanky:update(klanky)
+ cranky:update(cranky)
+ gnome:update(gnome)
+ squeak:update(squeak)
+ evilcara:update(evilcara)
 end
 
 function draw_npcs()
  cara:draw(cara)
  klanky:draw(klanky)
+ cranky:draw(cranky)
+ gnome:draw(gnome)
+ squeak:draw(squeak)
+ evilcara:draw(evilcara)
 end
 
 function npcs_colliding()
  local colliding
  if (hitactor(p,cara)) colliding=true
  if (hitactor(p,klanky)) colliding=true
+ if (hitactor(p,cranky)) colliding=true
+ if (hitactor(p,gnome)) colliding=true
+ if (hitactor(p,squeak)) colliding=true
+ if (hitactor(p,evilcara)) colliding=true
  return colliding
 end
 
@@ -676,6 +915,27 @@ function handle_dialogue(c)
    if (q.talked) then tb_init(2,{"go on. scram, kid."},cam_x,cam_y+106)
    else tb_init(2,{"hey kid, wanna buy some parts?"},cam_x,cam_y+106) end
   end
+  if c=="cranky" then
+   q = cranky
+   if (q.talked) then tb_init(4,{"get on outta here! \ni'm leakin oil!"},cam_x,cam_y+106)
+   else tb_init(4,{"what the? how did you\nget in here?!","i could hardly solve that \npuzzle just to go drain the \noil!","you did it just like that?"},cam_x,cam_y+106) end
+  end
+  if c=="gnome" then
+   q = gnome
+   if (q.talked) then tb_init(4,{"cool... can you leave now?"},cam_x,cam_y+106)
+   else tb_init(3,{"oh hey, somebody's in my house."},cam_x,cam_y+106) end
+  end
+  if c=="squeak" then
+   q = squeak
+   if (q.talked) then tb_init(3,{"what am i even supposed to be?","what is anything?","why are we even here?"},cam_x,cam_y+106) dialogue=false
+   else tb_init(3,{"what am i even supposed to be?","what is anything?","why are we even here?"},cam_x,cam_y+106) dialogue=false end
+  end
+  if c=="evilcara" then
+   q = evilcara
+   music(-1)
+   if (q.talked) then dialogue=false
+   else tb_init(1,{"hello, it is i,","evil car-","wait hold on, one more time","evil cara! hahaa!!","you have travelled far, talked\nwith every npc possible\nand now, it is time...","for the final boss battle!","note:(just like every other\none, sorry not sorry :>)"},cam_x,cam_y+106) dialogue=false precombat=true end
+  end
   talkingto=q
   if(talkingto.talked) then dialogue=false
   else init_menu(cam_x+2,cam_y+102,{q.options[1][q.stages[1]],q.options[2][q.stages[2]],q.options[3][q.stages[3]]}) end
@@ -692,9 +952,9 @@ function handle_response(sel)
   if(sel=="spring city?") return {"that's right!","spring city was established in \n2094 in what used to be \nthe american southwest.","it started as a small \ncollective of service droids.","together, they pooled \ntheir collective processing\npower to create a settlement."} 
   if(sel=="can you fix it?") return {"unfortunately, i don't have the \nrequired parts here with me.","resources are scarce."} 
   if(sel=="used to be?") return {'yeah!','of course, it was only \nconsidered "america" while \nthere were still humans.',"they've been gone for...","gosh...","decades now."} 
-  if(sel=="where can i find the parts?") return {"well,","you'll need a new \nchrono-encryption unit \nand a quantum data matrix.","parts like those are hard \nto come by nowadays.","you'll need to venture to \nthe voltoria hub to find \nreplacements.","just go right, \n\nyou can't miss it. :)"}
+  if(sel=="where can i find the parts?") return {"well,","you'll need a new \nchrono-encryption unit \nand a quantum data matrix.","parts like those are hard \nto come by nowadays.","but, i'm sure they're able\nto be found someplace 'round here!"}
   if(sel=="parts?") return {"yessir! i've got all sorts! \nbig, small, old, new...","well, maybe not new. \nslightly used at best.","fair warning, \nany complex parts i'll need \nto put an order in for."}
-  if(sel=="why do you look like that?") return {"oh, right","i suppose my body has \nbecome a sort of patchwork quilt \nover the years.","as new parts stopped being \nmanufactured, i've had to resort \nto scavenging replacements for","worn out parts from \nother robots. ","interested in some parts?"}
+  if(sel=="why do you look like that?") return {"oh... right.","i suppose my body has \nbecome a sort of patchwork quilt \nover the years.","as new parts stopped being \nmanufactured, i've had to resort \nto scavenging replacements for","worn out parts from \nother robots. ","interested in some parts?"}
   if(sel=="*attack him*") return {"huh? woah!"}
   if(sel=="i'm not interested") return {"hmm... are you sure?\nconsider carefully."}
   if(sel=="i'm sure") return {"well, \nas long as you're sure... ","you do realize you're \nonly useful for one \nthing now, right?"}
@@ -705,6 +965,18 @@ function handle_response(sel)
   if(sel=="i'd like to place an order!") return {"lovely!","what part?"}
   if(sel=="mostly?") return {"listen bud,\ndon't ask questions.","are you buying or not?"}
   if(sel=="*step back*") return {"oop, get back here, you!"}
+  if(sel=="yup, suck it nerd") return {"nerd?!","i'll show you who's the \nnerd!"}
+  if(sel=="wasn't hard at all") return {"hmph... showboat","seeing as how you broke into \nmy house, why shouldn't i scrap \nyou for parts right now?"}
+  if(sel=="took me awhile") return {"i know right?\ngame devs really popped off\nwith that one.","alright, what do you want?\ni'll let you off easy,\nyou seem polite."}
+  if(sel=="i need parts") return {"alright...","well, i've got what you need\nthat's for sure","let's see here... i've got \neyeballs, lowballs, bowling balls, \noh wait.. wrong list","i've got... cybernetic arms,\nimplants, brains, legs,","even this nifty little\nmacguff- i mean...\nchrono-encryption unit!"}
+  if(sel=="you're ugly") return {"yeah, real creative, guy","well, you asked for it"}
+  if(sel=="chrono-encryption unit") return {"ah... well, you and everyone\nelse, pal. question is:","what are ya gonna pay for it?"}
+  if(sel=="kill you for it") return {"woah... that took a dark turn.","hey- wh- back up pal!\nlet's think this thr-"}
+  if(sel=="i'm open to work") return {"hmph...","well, now that you mention it,\ni could use some help.","outside of this building, there's\nanother building"}
+  if(sel=="i'm sooo awesome") return {"come on, don't waste my time.\ngimme a better reason.\nwhat are you here for?"}
+  if(sel=="got parts?") return {"uhh... no?","hey man, can you leave?\ni just live here."}
+  if(sel=="nice tunes") return {"thanks... can you leave now?"}
+  if(sel=="look like a gnome") return {"._.","please leave."}
   return sel
 end
 -->8
@@ -791,14 +1063,16 @@ function tb_update()  -- this function handles the text box on every frame updat
    tb.cur=0 -- reset the buffer.
    if (ord(tb.str[tb.i],tb.char)!=32) sfx(tb.voice) -- play the voice sound effect.
   end
-  if (btnp(5)) tb.char=#tb.str[tb.i] -- advance to the last character, to speed up the message.
- elseif btnp(4) then -- if already on the last message character and button 🅾️/z is pressed:
+  if (btnp(5)) tb.char=#tb.str[tb.i] -- advance to the last character, to speed up the message. 
+ elseif btnp(4) or (#tb.str==tb.i and skipend) then -- if already on the last message character and button 🅾️/z is pressed: (or skipend has been tripped to skip player input)
   if #tb.str>tb.i then -- if the number of strings to display is larger than the current index (this means that there's another message to display next):
+   if(tb.i+1==#tb.str and changevoice>0) tb.voice=changevoice changevoice=-1 --if on last message, change to the changevoice
    tb.i+=1 -- increase the index, to display the next message on tb.str
    tb.cur=0 -- reset the buffer.
    tb.char=0 -- reset the character position.
   else -- if there are no more messages to display:
-   if(exitcombat) combat=false exitcombat=false swapstart=time()
+   if(skipend) skipend=false
+   if(exitcombat) exitcombat=false combat=false swapstart=time() music(currstage.entrymusic,5000)
    reading=false -- set reading to false. resumes normal gameplay.
    if(precombat) music(1) init_combat(talkingto) swapstart=time() 
    if combat then
@@ -807,7 +1081,9 @@ function tb_update()  -- this function handles the text box on every frame updat
     fighter.health-=pdmg
     pdmg=0
     enemydmg=0
-    if(fighter.health<=0) music(-1) sfx(10) exitcombat=true fighter.beatup=true talkingto.beatup=true tb_init(1,{"you won!"},cam_x,cam_y+106)
+    if(fighter.health<=0) then music(-1) sfx(10) exitcombat=true fighter.beatup=true talkingto.beatup=true tb_init(1,{"you won!"},cam_x,cam_y+106)
+    elseif(fighter.favor>=10) then talkingto.talked=true music(-1) exitcombat=true tb_init(fighter.voice,fighter.sparetext,cam_x,cam_y+106)
+    elseif(playerattacked) then player_turn=false playerattacked=false end
    end
   end
  else donetalking=true
@@ -841,9 +1117,11 @@ function camera_update()
 end
 
 function palbrite(b)
-local p,c,v="あつてとなにぬきのはこふへほのみああちつちちかあうおあえいてうお"pal()for i=b,5do for j=0,15do c=peek(24336+j)+1if(c>=129)c-=112
-v=ord(sub(p,c,c))-154if(v>=16)v+=112
-pal(j,v,1)end end end
+ local p,c,v="あつてとなにぬきのはこふへほのみああちつちちかあうおあえいてうお"pal()for i=b,5do for j=0,15do c=peek(24336+j)+1if(c>=129)c-=112
+ v=ord(sub(p,c,c))-154if(v>=16)v+=112
+ pal(j,v,1)end end 
+end
+
 
 function updatefade()
  fadecount+=1.5
@@ -913,6 +1191,33 @@ function init_stages()
       {x=296,y=248,w=4,h=8,sprite=222,value=0,dx=0,dy=0,s=1},
       {x=360,y=248,w=4,h=8,sprite=222,value=0,dx=0,dy=0,s=20}
     }
+  },
+  gnomeland={
+    entrymusic=48,
+    px=520,
+    py=152,
+    sx=496,
+    mx=560,
+    sy=128,
+    my=136,
+  },
+  gnomeland2 ={
+    entrymusic=48,
+    px=656,
+    py=288,
+    sx=496,
+    mx=560,
+    sy=264,
+    my=312,
+  },
+  finalroom={
+    entrymusic=0,
+    px=712,
+    py=208,
+    sx=704,
+    mx=889,
+    sy=136,
+    my=152,
   }
  }
  currstage=stages.mechmedics
@@ -1023,7 +1328,7 @@ end
 function draw_combat()
  if(t<=1.2) 
  then 
-  draw_game()
+  if(not exitcombat) draw_game()
  else
   transition=false
   for i=-32,127,8 do
@@ -1042,7 +1347,7 @@ function draw_combat()
  fighter.animate(fighter)
  end
  if(t>=2.4 and not transition) then
-  if(not attacking and not reading) draw_combat_menu()
+  if(not attacking and not reading and player_turn) draw_combat_menu()
   -- player hp bar
   rectfill(cam_x+12,cam_y+45,cam_x+40,cam_y+40+19,0) -- draw the background.
   rect(cam_x+12,cam_y+45,cam_x+40,cam_y+40+19,7) -- draw the border.
@@ -1057,18 +1362,33 @@ end
 
 function update_combat()
  if(k==31) then k=0 else k+=.5 end
- if(not reading and (t>=2.4)) then update_menu()
+ if(not player_turn) then
+ if (talkingto.name=="klanky") then 
+   if(attack(talkingto,p)) then enemydmg=flr(rnd(talkingto.attackpower)+1) tb_init(1,{"klanky lunges towards you with \na huge claw arm!","he hit!","you took "..enemydmg.." points of damage!"},cam_x,cam_y+106)
+   else tb_init(1,{"klanky lunges towards you with \na huge claw arm!","he missed!"},cam_x,cam_y+106) end
+  end
+  if (talkingto.name=="cranky") then 
+   if(attack(talkingto,p)) then enemydmg=flr(rnd(talkingto.attackpower)+1) tb_init(1,{"cranky fires a huge laser from his arm!","he hit!","you took "..enemydmg.." points of damage!"},cam_x,cam_y+106)
+   else tb_init(1,{"cranky fires a huge laser from his arm!","he missed!"},cam_x,cam_y+106) end
+  end
+  if (talkingto.name=="evilcara") then 
+   if(attack(talkingto,p)) then enemydmg=flr(rnd(talkingto.attackpower)+1) tb_init(1,{"cara shoots lasers from her \neyes!","she hit!","you took "..enemydmg.." points of damage!"},cam_x,cam_y+106)
+   else tb_init(1,{"cara shoots lasers from her eyes!","she missed!"},cam_x,cam_y+106) end
+  end
+  player_turn=true
+ elseif(not reading and (t>=2.4)) then update_menu()
  elseif(reading) then tb_update()
  end
 end
 
 function init_combat(ch)
- player_turn=false
+ player_turn=true
  attacking=false
+ playerattacked=false
  precombat=false
  exitcombat=false
- combat=true
  transition=true
+ combat=true
  enemydmg=0
  pdmg=0
  k=0
@@ -1089,6 +1409,11 @@ function attack(a,b)
  return flr(rnd(20)+1)>=b.armorclass
 end
 
+function reason(a,b)
+ attacking=true
+ return flr(rnd(20)+1)>=b.reasondc
+end
+
 function draw_combat_menu()
  if combat then
   rectfill(tb.x+5,tb.y-20,tb.x+47,tb.y-18+tb.h,tb.col1) -- draw the background.
@@ -1102,7 +1427,6 @@ function draw_combat_options()
   oset=i*6.80
   if i==m.sel then
    rectfill(cx+4,m.y-20+oset-1,cx+38,m.y-20+oset+5,col1)
-   print("🅾️",cx+31,m.y-20+oset,0)
    print(m.options[i],cx+5,m.y-20+oset,col2)
   else
    print(m.options[i],m.x+5,m.y-20+oset,col1)
@@ -1110,6 +1434,7 @@ function draw_combat_options()
  end
 end
 
+--Used to make copies of tables without modifying the parent table
 function deepcopy(orig)
     local orig_type = type(orig)
     local copy
@@ -1160,64 +1485,64 @@ __gfx__
 00006677777700000000000000000000000066777777000000000002888000000000000000000000555555555550055500000005555555550055555555000000
 00667711111177000000667777770000006677111111770000000028888800000000000288800000555555555550055500000005555555550055555555500000
 0667111711711170006677111111770006671117117111700000002818a800000000002888880000555555555550055500000005555555550055555555500000
-66711117117111170667111711711170667111171171111700000028888800000000002818a80000000055500000055500000005550005550055000055500000
-66711111111111176671111711711117667111111111111700000002888000000000002888880000000055500000055500000005550005550055000005500000
-6671117111171117667111111111111766711177777711170000b011100000000000000288800000000055500000055500000005550005550055000005500000
-066711177771117066711171111711170667111777711170000b6b88889900000000b01110000000000055500000055500000005550005550055000055500000
-0066771111117700066711177771117000667711111177000006b88880099900000b6b8888990000000055500000055500000005550005550055555555500000
+66711117117111170667111188111170667111171171111700000028888800000000002818a80000000055500000055500000005550005550055000055500000
+66711111111111176671111188111117667111111111111700000002888000000000002888880000000055500000055500000005550005550055000005500000
+6671117111171117667111118811111766711177777711170000b011100000000000000288800000000055500000055500000005550005550055000005500000
+066711177771117066711111111111170667111777711170000b6b88889900000000b01110000000000055500000055500000005550005550055000055500000
+0066771111117700066711118811117000667711111177000006b88880099900000b6b8888990000000055500000055500000005550005550055555555500000
 00006677777700000066771111117700000066777777000000600110000009000006b88880099900000055500000055500000005550005550055555555500000
 00000066666600000000667777770000000000666666000000b08888000c99900060888800000900000055500000055500000005550005550055555555000000
-0000006668660070000700666866000000000066686600700b00e00e00c0999000b0e00e000c9990000055500000055500000005550005550055500555000000
+0000006668660070000000666866000000000066686600700b00e00e00c0999000b0e00e000c9990000055500000055500000005550005550055500555000000
 0000776688867700000077668886770000007766888677000b00e00e0000c0c00b00e00e00009990000055500000055555555005555555550055500555000000
-000700666866000000000066686600700007006668660000060070070000c0c00b0070070000c0c0000055500000055555555005555555550055500055500000
+000700666866000000070066686600700007006668660000060070070000c0c00b0070070000c0c0000055500000055555555005555555550055500055500000
 0000006666660000000000666666000000000066666600000600e00e000000006060e00e00000000000055500000055555555005555555550055500055550000
 0000011111111000000001111111100000000111111110000000e00e000000000000e00e00000000000000000000000000000000000000000000000000000000
 00001111111111000000111111111100000011111111110000007707700000000000770770000000000000000000000000000000000000000000000000000000
-00000077777777710000000000000000000999940000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-00000077777777710000000000000000009a991940000000000000000000000000000000000000000000000000000000000bbbb0000022000000000000000000
-00000077777777710000000000000000009999994000000000099994000000000000000000000000000000000000000000bbbbbb088020100000000288800000
-000000777777777100000000000000000000000600000000009a99194000000000000000000000000000000000000000000bbbb0008020100000002818a80000
-000000777777777100000000000000000000ed060de2220000999999400000000000000000000000000000000000000000099994008dd0200000b00288800c00
-00000077777777710000000000000000000eeeeeedeed2000000ed060de2220000000000000000000000000000000000009a991940eee020000b6b888899099c
-00000077777777710077700000777000000cededeeed0200000eeeeeedeed20000000000000000000000000000000000009999994de2222066b6b88880009990
-0000007711111110077777000777770000cc0edeeed00110000cededeeed020000000000000000000000000000000000cccaeeeeedeed200000008880000099c
-0000077100000000777777707777777000ca00eeed00002000cc0edeeed00110001ccc00001ccc000000000000000000000bbbb0000000000000000000000000
-0000011000000000ccccccc0ccccccc000ac00060000002000ca00eeed000020001aca00001aca00000000000000000000bbbbbb000022000000000288800000
-0000000000000000111aaa101aaa111000c000bbbb00010000a000bbbb000020001ccc00001c0c000000000000000000000bbbb0088020000000002818a80000
-0000000000000000ccccccc0ccccccc000c00bbbbbb0101000c00bbbbbb001000001c0000001c0000000000000000000000999940080200000000002888000c0
-00000000000000006767676067676760006000bbbb00202000c000bbbb0001000011cc000011cc000000000000000000009a9919408dd0010000b01110000c00
-00000000000000007676767076767670000000800200000000600080020002000011cc000011cc0000000000000000000099999940eee001060b6b888899099c
-0000000000000000cc000cc0cc000cc0000000800200000000000080020000000001c0000001c00000000000000000000000ed060de2220200b6b88880009990
-0000000000000000ccc00cccccc00ccc000008802200000000000880220000000001c0000001c0000000000000000000cccaeeeeedeed222060008880000099c
-00005d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d5d2d2d5d5d000000005d2d2d2dce2d2d2d2d2d2d2ddede2d2d5d0000000000000000000000005d2d
-2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d5d0000005d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d5d
-00005d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d5d5d2d2d2d5d2d2d2d5d000000005d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d5d0000000000000000000000005d2d
-2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d5d0000005d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d5d
-00005d2d2d5d5d5d5d5d2d2d5d5d5d5d5d5d5d5d5d2d2d2d5d2d2d2d5d000000005d5d5d5d5d5d5dcdcdcdcd5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d00005d5d
-5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d2d2d2d2d5d5d0000005d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d
-00005d2d2d5d2d2d2d5d2d2d5d2d2d2d2d2d2d2d2d2d2d2d5d2d2d2d5d000000005d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d5d00000000
-0000000000000000000000000000005d2d2d2d2d5d00000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-00005d2d2d5d2d2d2d5d2d2d5d2d2d2d2d2d2d2d2d2d2d2d5d2d2d2d5d000000005d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d5d00000000
-00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-00005d2d2d5d2d2d2d5d2d2d5d2d2d5d5d5d5d5d5d5d5d5d5d2d2d2d5d000000005d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d5d00000000
-00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-00005d2d2d5d2d2d2d5d2d2d5d2d2d5d2d2d2d2d2d2d2d2d5d2d2d2d5d000000005d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d5d00000000
-0000000000000000000000000000005d2d2d2d2d5d00000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-00005d2d2d5d2d2d2d5d2d2d5d2d2d5d2d2d2d2d2d2d2d2d5d2d2d2d5d000000005d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d5d00005d5d
-5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d2d2d2d2d5d5d000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-00005d2d2d5d2d2d5d5d2d2d5d2d2d5d2d2d2d2d5d5d2d2d5d2d2d2d5d000000005d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d5d00005d2d
+00000077777777710000000000000000000999940000000000000000000000000000000000000000000066777777000000000000000000000000000000000000
+00000077777777710000000000000000009a991940000000000000000000000000000000000000000066771111117700000bbbb0000022000000000000000000
+00000077777777710000000000000000009999994000000000099994000000000000000000000000066711181181117000bbbbbb088020100000000288800000
+000000777777777100000000000000000000000600000000009a99194000000000000000000000006671111811811117000bbbb0008020100000002818a80000
+000000777777777100000000000000000000ed060de2220000999999400000000000000000000000667111111111111700099994008dd0200000b00288800c00
+00000077777777710000000000000000000eeeeeedeed2000000ed060de2220000000000000000006671117777771117009a991940eee020000b6b888899099c
+00000077777777710077700000777000000cededeeed0200000eeeeeedeed20000000000000000000667111777711170009999994de2222066b6b88880009990
+0000007711111110077777000777770000cc0edeeed00110000cededeeed020000000000000000000066771111117700cccaeeeeedeed200000008880000099c
+0000077100000000777777707777777000ca00eeed00002000cc0edeeed00110001ccc00001ccc000000667777770000000bbbb0000000000000000000000000
+0000011000000000ccccccc0ccccccc000ac00060000002000ca00eeed000020001aca00001aca00000000666666000000bbbbbb000022000000000288800000
+0000000000000000111aaa101aaa111000c000bbbb00010000a000bbbb000020001ccc00001c0c000000006668660070000bbbb0088020000000002818a80000
+0000000000000000ccccccc0ccccccc000c00bbbbbb0101000c00bbbbbb001000001c0000001c0000000776688867700000999940080200000000002888000c0
+00000000000000006767676067676760006000bbbb00202000c000bbbb0001000011cc000011cc000007006668660000009a9919408dd0010000b01110000c00
+00000000000000007676767076767670000000800200000000600080020002000011cc000011cc0000000066666600000099999940eee001060b6b888899099c
+0000000000000000cc000cc0cc000cc0000000800200000000000080020000000001c0000001c00000000111111110000000ed060de2220200b6b88880009990
+0000000000000000ccc00cccccc00ccc000008802200000000000880220000000001c0000001c0000000111111111100cccaeeeeedeed222060008880000099c
+00005d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d5d2d2d5d5d000000005d2d2d2dce2d2d2d2d2d2d2ddede2d2d5d0000000000000000000000000000
+0000000000000000000000000000005d2d2d2d2d5d000000005d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d5d
+00005d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d5d5d2d2d2d5d2d2d2d5d000000005d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d5d0000000000000000000000000000
+0000000000000000000000000000000f0f0f0f0f0f000000005d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d5d
+00005d2d2d5d5d5d5d5d2d2d5d5d5d5d5d5d5d5d5d2d2d2d5d2d2d2d5d000000005d5d5d5d5d5d5dcdcdcdcd5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d00000000
+0000000000000000000000000000001f1f1f1f1f1f000000005d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d
+00005d2d2d5d2d2d2d5d2d2d5d2d2d2d2d2d2d2d2d2d2d2d5d2d2d2d5d000000005d2d2d2d2d5d5d2d2d2d2d5d5d2d2d2d2d2d2d2d2d2d2d2d2d2d5d00005d5d
+5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d2d2d2d2d5d00000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+00005d2d2d5d2d2e2d5d2d2d5d2d2d2d2d2d2e2d2d2d2d2d5d2e2d2d5d000000005d2d2d2d2d2d2d2d2e2d2d2d2d2d2d2d2d2d2d2d2d2e2d2d2d2d5d00005d2d
+2d2d2d2d2d2d2d2d2d2d2d2d2d2d5d5d2d2d2d2d5d5d000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+00005d2d2d5d2d2d2d5d2d2d5d2d2d5d5d5d5d5d5d5d5d5d5d2d2d2e5d000000005d2d2d2d2d2d2d2d2d2d2d2d2e2d2e2d2d2d2d2d2d2d2d2d2d2d5d00005d2d
 2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d5d000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-00005d2d2d5d2d2d5d5d2d2d5d2d2d5d5d5d5d5d5d5d2d2d5d2d2d2d5d000000005d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d5d00005d2d
+00005d2d2d5d2d2d2d5d2d2d5d2d2e5d2d2d2d2d2d2d2d2d5d2d2d2d5d000000005d2d2d2d2d2e2d2d2d2d2d2d2d2d2d2d2d2d2e2d2d2d2d2d2e2d5d00005d2d
 2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d5d000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-00005d2d2d5d2d2d2d2d2d2d5d2d2d2d2d2d2d2d2d2d2d2d5d2d2d2d5d000000005d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d5d00005d2d
+00005d2e2d5d2d2d2d5d2d2d5d2d2d5d2d2d2e2d2d2d2d2d5d2d2d2d5d000000005d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d5d00005d2d
+2d2d2d2d2d2e2d2d2d2d2e2d2d2d2d2d2d2d2d2d2d5d000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+00005d2d2d5d2e2d5d5d2d2d5d2d2d5d2d2d2d2d5d5d2d2d5d2d2d2d5d000000005d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2e2d2d2d2d2d2d2d2d2d2d5d00005d2d
+2d2e2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2e2d2d2d5d000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+00005d2d2d5d2d2d5d5d2d2d5d2d2d5d5d5d5d5d5d5d2d2d5d2d2e2d5d000000005d2d2d2d2d2e2d2d2e2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d5d00005d2d
 2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d5d000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-00005d2d2d5d2d2d2d2d2d2d5d2d2d2d2d2d2d2d2d2d2d2d5d2d2d2d5d000000005d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d5d00005d2d
+00005d2d2d5d2d2d2d2d2d2d5d2d2d2d2d2d2d2d2d2d2d2d5d2d2d2d5d000000005d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2e2d2d2d2d5d00005d2d
 2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d5d000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-00005d2d2d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d2d2d2d5d000000005d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d5d00005d2d
+00005d2d2d5d2d2d2d2d2d2e5d2d2e2d2d2d2d2d2d2d2d2e5d2d2d2d5d000000005d2d2d2d2d2d2d2d2d2d2d2d2d2e2d2d2d2e2d2d2d2d2d2d2d2d5d00005d2d
+2d2d2e2d2d2d2d2d2e2d2d2d2d2d2d2d2d2d2d2d2d5d000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+00005d2d2d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d2d2d2d5d000000005d2d2d2e2d2d2d2d2d2e2d2d2d2d2d2d2d2d2d2d2d2d2d2d2e2d5d00005d2d
+2d2d2d2d2d2d2d2d2d2d2d2d2d2e2d2d2d2d2d2e2d5d000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+00005d2d2d2d2d2e2d2d2d2d2d2d2d2d2d2e2d2d2d2d2d2d2d2d2d2d5d000000005d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2e2d2d2d2d2d5d00005d2d
 2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d5d000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-00005d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d5d000000005d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d5d00005d2d
-2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d5d000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-00005d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d5d000000005d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d00005d5d
+00005d2d2d2d2d2d2d2d2d2d2d2e2d2d2d2d2d2d2d2e2d2d2d2d2d2e5d000000005d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d00005d5d
 5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 00005d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d0000000000000000000000000000000000000000000000000000000000000000000000
 00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
@@ -1384,7 +1709,7 @@ __label__
 00000000006666666655555555555555556666666655555555555555556666666655555555555555556666666655555555555555555555555555555555555555
 
 __gff__
-0000000000000000000000000404040400000000000000000000000004040404000000000000000000000000040404040000000000000000000000000404040409090909090901010101000000000000090909090909010101010000000000000000010101010101000000000101010100000101010101010101000001010101
+0000000000000000000000000404040400000000000000000000000004040404000000000000000000000000040404040000000000000000000000000404040409090909090901010101000000000000090909090909010101010000000000000000010101010101000009090901010100000101010101010101090909010101
 0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000001000000000000000000000000000000000000030001000000000101010100014111000500010000000001010000000181210009000000000001010101010101
 __map__
 d5d5d5d5e5d5d5d5d5d5e5d5d5d5ebd5d5d5d5d5d5d5e5d5ebd5d5d5d5ebd5d5d5d5e5d5d5d5d5d5e5000000e5dafbfbfbfbfbfbfbfbfbfbfbfbfbfbfbfbfbfbfbfbfbfbfbfbfbfbfbfbfbfbfbfbfbfbfafbfbfbfbfbfbfbfbfdfbfbfbfbfbfbfbfbfbfbfbfdfbfbfbfbfbfbfbfbfbfbfbfbfbfbfbfbfbfbfbfbfbfbfbfbfbc0
@@ -1393,38 +1718,38 @@ d5d5d8d6d5d5d5d9d8d5d5d9d6d5d5d5d6d9d5d5d5d6d6d5d5d5d6d9dbd5dbd6d6d5d5d5d6d6d5d5
 d5d5d6d9d5d5d5d6d6dad5d6d9d5d5d5d6d8dbd5d5d9d7d5ead5d6d6d5ead5d7d8ebd5d5d7d6d5d5eb000000d8dbfbfbfbfbfbfbfbfbfbfbfbfbfaf9fbfbfbfbfbfbf9f9fbfbf9f9f9fbfbfbfbfbf9f9f9fafbfbfbfbfbfbfcfcf9f9fbfbfbfbfbfbfcfefefcfbfefbfefffbfbfbfefbfbfdfcfbfcfbfbfbfbfcfefcfbfefec0
 d5d5d5d5dad5ead5d5d5d5d5d5ead5d5d5d5d5ebd5d5d5d5d5d5d5d5d5d5d5d5d5d5d5dad5d5d5d5d5000000d7ebfbfbfbfbfbfbfbfbfbfbfbfbf9f9fbfbfbfbfbfbf9f9fbfbf9f9f9fbfbfbfbfbfcf9fcfcfbfbfbfbfbfbfcfcfcfcfbfbfbfbfbfbfcfcfcfefbfcfbfefcfbfbfbfcfbfbfcfefbfcfbfbfbfbfcfefcfbfefcc0
 d5d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d5000000dbd5e4e4e4e4e4e4e4e4e4e4e4e4e4e4e4e4e4e4e4e4e4e4e4e4e4e4e4e4e4e4e4e4e4e4e4e4e4e4e4e4e4e4e4e4e4e4e4e4e4e4e4e4e4e4e4e4e4e4e4e4e4e4e4e4e4e4e4e4e4e4e4e4e4e4e4e4e4e4e4e4e4c0
-d5d2e2d2d2d2d2d2d2d2e2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2e2d2d2d2d2d2d2d2d2d2e2d2d2d5d3d3e3d5eaf5f5f8f5f5f5f5f5f8f5f5f5f5f5f5f5f8f5f5f5f7f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5ebc0
-d5d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2e2d2d2e2d2d2d2d2d2d2d2d2d2d2d2e2d2d2d2d2d2d2d2d2d3e3d2d2f5f5f5f5f5f5f7f5f5f5f5f8f5f5f5f5f5f5f5f5f5f5f5f5f7f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5eaf3
-d5d2d2d2d2e2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d3e3d2d2f7f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f8f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5dbc0
-d5d2d2d2d2d2d2d2d2d2d2d2d2e2d2d2d2d2d2d2d2d2d2d2e2d2d2d2e2d2d2d2d2d2d2d2d2d2d2d2d2d2d3e3d2d2f5f5f5f7f5f5f5f5f5f5f5f5f5f8f5f5f5f5f5f5f5f8f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5d2d2e0
-d5d2e2d2d2d2d2d2d2d2e2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2e2d2d2d2d3e3d2d2f5f5f5f5f5f5f8f5f5f5f5f5f5f5f5f5f7f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5d2d2e0
-d5d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d5d3d3e3d5d5f5f5f5f5f5f5f5f5f5f8f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f8f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5d2d2e0
-d5d2d2d2d2d2d2e2d2d2d2d2d2d2d2d2e2d2d2e2d2d2d2d2e2d2d2d2d2d2d2d2d2d2e2d2d2d2d2d2d5000000d5eaf5f7f5f7f5f5f5f5f5f5f5f5f7f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5dbc0
-d5d2e2d2d2d2d2d2d2d2d2d2e2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2e2d2d2d2d2d2d2d2d2d2d2d2d5000000d5d5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f7f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5dac0
-d5d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d5000000d5daf5f5f5f5f5f5f5f7f5f5f5f5d2d2d2f5f5f5f8f5f5f5f5f5f5f8f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5d2d2d2f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5eac0
+d5d2e2d2d2d2d2d2d2d2e2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2e2d2d2d2d2d2d2d2d2d2e2d2d2d5d3d3e3d5eaf5f5f8f5f5f5f5f5f8f5f5f5f5f5f5f5f8f5f5f5f7f5f5f5f5f5f5f5f5f8f5f5f5f5f5f5f7f5f5f5f5f5f5f5f5f5f5f8f5f5f7f5f5f8f5f5f5f5f5f5f5f8f5f5f5f5f7f5f5f5f5f5f5f8f5f5f5f5f5f5ebc0
+d5d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2e2d2d2e2d2d2d2d2d2d2d2d2d2d2d2e2d2d2d2d2d2d2d2d2d3e3d2d2f5f5f5f5f5f5f7f5f5f5f5f8f5f5f5f5f5f5f5f5f5f5f5f5f7f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f8f5f5f5f7f5f5f5f5f5f5f5f5f5f7f5f5f8f5f5f5f5f8f5f5f5f5f8f5f5f5f5f5f5f5f5f5f5f5eaf3
+d5d2d2d2d2e2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d3e3d2d2f7f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f8f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f8f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f7f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f7f5f5f5f5f5f5f5f5f5dbc0
+d5d2d2d2d2d2d2d2d2d2d2d2d2e2d2d2d2d2d2d2d2d2d2d2e2d2d2d2e2d2d2d2d2d2d2d2d2d2d2d2d2d2d3e3d2d2f5f5f5f7f5f5f5f5f5f5f5f5f5f8f5f5f5f5f5f5f5f8f5f5f5f5f5f5f5f5f7f5f5f5f5f5f8f5f5f5f7f5f5f8f5f5f5f5f8f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f7f5f5f8f5f5f5f5f5f5f5f8f5f5d2d2e0
+d5d2e2d2d2d2d2d2d2d2e2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2e2d2d2d2d3e3d2d2f5f5f5f5f5f5f8f5f5f5f5f5f5f5f5f5f7f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f7f5f5f7f5f5f5f7f5f5f5f5f5f5f5f5f5f5f7f5f5f5f5f5f5d2d2e0
+d5d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d5d3d3e3d5d5f5f5f5f5f5f5f5f5f5f8f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f8f5f5f5f5f5f5f5f5f8f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f8f5f5f5f5f5f5f5f5f5f5f5f5f8f5f5f5f5f8f5f5f5f5f5f5f5f5f5d2d2e0
+d5d2d2d2d2d2d2e2d2d2d2d2d2d2d2d2e2d2d2e2d2d2d2d2e2d2d2d2d2d2d2d2d2d2e2d2d2d2d2d2d5000000d5eaf5f7f5f7f5f5f5f5f5f5f5f5f7f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f8f5f5f5f5f5f5f5f8f5f5f5f5f5f5f7f5f5f7f5f5f5f5f5f5f5f7f5f5f5f5f5f5f5f5f5f8f5f5f5f5f5f5f5f7f5f5f5f5f5dbc0
+d5d2e2d2d2d2d2d2d2d2d2d2e2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2e2d2d2d2d2d2d2d2d2d2d2d2d5000000d5d5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f7f5f5f5f5f5f5f7f5f5f5f5f5f5f5f5f5f5f5f7f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f7f5f5f5f5f5f5f7f5f7f5f5f5f5f5f5f5f5dac0
+d5d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d5000000d5daf5f5f5f5f5f5f5f7f5f5f5f5d2d2d2f5f5f5f8f5f5f5f5f5f5f8f5f5f5f5f5f5f5f5f7f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5d2d2d2f5f5f5f5f5f5f8f5f5f5f5f5f7f5f5f5f5f5f5f5f5f5f8f8f5f5f5eac0
 d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5000000d5d5f4f4f4f4f4f4f4f4dad5dbd5d2d2d2eadbebd5f4f4f4f4f4f4f4f4f4f4f4f4f4f4f4f4f4f4f4f4f4f4f4f4f4f4f4d5d5d5d5d2d2d2d5d5d5d5f4f4f4f4f4f4f4f4f4f4f4f4f4f4f4f4f4f4f4f4f4f4f4f4c0
 000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000c0c0c0c0c0c0c0c0c0c0c0c0f3f3f3f3f3f3c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0f1f1f1c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0
 000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000d3d3d3d3d3d3d300000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000d5d2d2d2d2d50000000000000000000000000000000000000000d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5
 0000d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5000000000000000000000000000000000000000000000000000000000000000000d5d5d2d2d2d2d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5000000d5d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d5
-0000d5d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d5d2d2d2d500000000d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5000000000000000000000000d5d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d5000000d5d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d5
-0000d5d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d5d2d2d2d500000000d5d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d5000000000000000000000000d5d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d5000000d5d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d5
-0000d5d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d5d2d2d2d500000000d5d2d2eceed2d2d2d2d2d2d2eed2d2d2d5000000000000000000000000d5d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d5000000d5d2d2d2d2e2e2e2e2d2d2d2d2d2d2e2e2e2e2d2d2d2d2d2d2e2e2e2e2d2d2d2d2d2d2d2d2d2d5
-0000d5d2d2d2d2d2d2d2d2d2d2d2d2d2d2d5d5d2d2d2d2d2d5d2d2d2d500000000d5d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d5000000000000000000000000d5d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d500d3d3d5d2d2d2e2d2d2d2d2e2d2d2d2d2e2d2d2d2d2e2d2d2d2d2e2d2d2d2d2e2d2d2d2d2d2d2d2d2d5
+0000d5d2d2e2e2d2d2d2d2d2e2d2e2e2d2d2d2d2d2d2d2d2d5d2d2d2d500000000d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5000000000000000000000000d5d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d5000000d5d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d5
+0000d5d2d2e2e2d2d2e2d2d2e2d2e2e2d2d2d2d2d2d2d2d2d5d2d2e2d500000000d5d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d5000000000000000000000000d5d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d5000000d5d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d5
+0000d5d2d2d2e2d2e2e2e2d2e2d2e2e2d2d2d2d2d2d2d2d2d5d2d2d2d500000000d5d2d2eceed2d2d2e2d2d2d2eed2d2d2d5000000000000000000000000d5d2d2d2d2d2d2d2e2d2d2d2d2d2d2d2d2e2d2d2d2d2d2d5000000d5d2d2d2d2e2e2e2e2d2d2d2d2d2d2e2e2e2e2d2d2d2d2d2d2e2e2e2e2d2d2d2d2d2d2d2d2d2d5
+0000d5d2d2d2e2d2d2e2d2d2e2d2e2e2d2d5d5d2d2e2d2d2d5d2d2d2d500000000d5d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d5000000000000000000000000d5d2d2d2e2d2d2d2d2d2d2d2e2d2d2d2d2d2d2d2e2d2d2d500d3d3d5d2d2d2e2d2d2d2d2e2d2d2d2d2e2d2d2d2d2e2d2d2d2d2e2d2d2d2d2e2d2d2d2d2d2d2d2d2d5
 d3d3d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d2d2d2d2d2d5d2d2d2d500000000d5d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d5000000000000000000000000d5d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d500d3d2d2d2d2e2d2d2d2d2d2d2e2d2d2e2d2d2d2d2d2d2e2d2d2e2d2d2d2d2d2d2e2d2d2d2d2d2d2d2d5
-d3d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d5d2d2d5d500000000d5d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d5000000000000000000000000d5d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d500d3d2d2d2d2e2d2d2d2d2d2d2e2d2d2e2d2d2d2d2d2d2e2d2d2e2d2d2d2d2d2d2e2d2d2d2d2d2d2d2d5
-d3d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d5d2d2d5d5e1e1f3f3d5d2d2d2d2d2efefefefefd2d2d2d2d2d5000000000000000000000000d5d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d500d3d2d2d2d2e2d2d2d2d2d2d2e2d2d2e2d2d2d2d2d2d2e2d2d2e2d2d2d2d2d2d2e2d2d2d2d2d2d2d2d5
-d3d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d5d2d2d2d2d2e1f3d2d2d2d2d2d2d2ef000000efd2d2d2d2d2d5000000000000000000000000d5d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d500d3d2d2d2d2e2d2d2d2d2d2d2e2d2d2e2d2d2d2d2d2d2e2d2d2e2d2d2d2d2d2d2e2d2d2d2d2d2d2d2d5
-d3d3d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d2d2d2d5d2d2d2d2d2e1f3d2d2d2d2d2d2d2efefefefefd2d2d2d2d2d5000000000000000000000000d5d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d500d3d2d2d2d2e2d2d2d2d2d2d2e2d2d2e2d2d2d2d2d2d2e2d2d2e2d2d2d2d2d2d2e2d2d2d2d2d2d2d2d5
-0000d5d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d5d5d2d2d2d5d2d2d2d2d2e1f3d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d5000000000000000000000000d5d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d500d3d3d5d2d2d2e2d2d2d2d2e2d2d2d2d2e2d2d2d2d2e2d2d2d2d2e2d2d2d2d2e2d2d2d2d2d2d2d2d2d5
-0000d5d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d5d2d2d2d2d2e1f3d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d5000000000000000000000000d5d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d5000000d5d2d2d2d2e2e2e2e2d2d2d2d2d2d2e2e2e2e2d2d2d2d2d2d2e2e2e2e2d2d2d2d2d2d2d2d2d2d5
-0000d5d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d5d2d2d5d5e1e1f3f3d5d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d5000000000000000000000000d5d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d5000000d5d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d5
+d3d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d5d2d2d5d500000000d5d2d2e2d2d2d2d2d2d2d2d2d2d2d2d2d5000000000000000000000000d5d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2e2d2d2d2d2d2d2d500d3d2d2d2d2e2d2d2d2d2d2d2e2d2d2e2d2d2d2d2d2d2e2d2d2e2d2d2d2d2d2d2e2d2d2d2d2d2d2d2d5
+d3d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d5e2d2d5d5e1e1f3f3d5d2d2d2d2d2efefefefefd2d2d2d2d2d5000000000000000000000000d5d2d2d2e2d2d2d2d2d2e2d2d2d2d2d2d2d2d2d2d2d2d2d500d3d2d2d2d2e2d2d2d2d2d2d2e2d2d2e2d2d2d2d2d2d2e2d2d2e2d2d2d2d2d2d2e2d2d2d2d2d2d2d2d5
+d3d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d5d2d2d2d2d2e1f3d2d2d2d2d2d2d2ef000000efd2d2e2d2d2d5000000000000000000000000d5d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d500d3d2d2d2d2e2d2d2d2d2d2d2e2d2d2e2d2d2d2d2d2d2e2d2d2e2d2d2d2d2d2d2e2d2d2d2d2d2d2d2d5
+d3d3d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d2d2d2d5d2d2d2d2d2e1f3d2d2d2e2d2d2d2efefefefefd2d2d2d2d2d5000000000000000000000000d5d2d2d2d2d2d2d2e2d2d2d2d2d2d2d2d2d2d2d2e2d2d2d500d3d2d2d2d2e2d2d2d2d2d2d2e2d2d2e2d2d2d2d2d2d2e2d2d2e2d2d2d2d2d2d2e2d2d2d2d2d2d2d2d5
+0000d5d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d5d5d2d2d2d5d2d2d2d2d2e1f3d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d5000000000000000000000000d5d2e2d2d2d2d2d2d2d2e2d2d2d2d2d2e2d2d2d2d2d2d2d500d3d3d5d2d2d2e2d2d2d2d2e2d2d2d2d2e2d2d2d2d2e2d2d2d2d2e2d2d2d2d2e2d2d2d2d2d2d2d2d2d5
+0000d5d2d2e2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2e2d2d5d2d2d2d2d2e1f3d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d5000000000000000000000000d5d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d5000000d5d2d2d2d2e2e2e2e2d2d2d2d2d2d2e2e2e2e2d2d2d2d2d2d2e2e2e2e2d2d2d2d2d2d2d2d2d2d5
+0000d5d2d2d2d2d2e2d2d2d2d2d2d2e2d2d2d2d2d2d2d2d2d5d2d2d5d5e1e1f3f3d5d2d2d2d2d2d2d2e2d2d2d2d2d2d2d2d5000000000000000000000000d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d2d2d2d2d5d5000000d5d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d5
 __sfx__
 950e00001303513005000050000520005000051f005000051d0050000500005000051d0050000500005000051d0050000500005000051d0050000500005000051d0050000500005000051d00500005000051f005
 b104010024725245001c0001c0001c0001c0001c00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 4909010000425003001a3000030400304003040030400304003040030400304003040030400304003040030400304003040030400304003040030400304003040030400304003040030400304003040030000300
 650501002352500500005000050000500005000050000500005000050000500005000050000500005000050000500005000050000500005000050000500005000050000500005000050000500005000050000500
-4d0401001052500503000030000300003000030000300003000030000300003000030000300003000030000300003000030000300003000030000300003000030000300003000030000300003000030000300003
+4d0401001054500503000030000300003000030000300003000030000300003000030000300003000030000300003000030000300003000030000300003000030000300003000030000300003000030000300003
 910c080028645326450000526635000001a625000000e615000003260000000326000000032605000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 9110002026610266112661126611256112561124611226111e611196110f6110761103611016110061100611006110061100611036110861111611186111e6112261124611256112761127611286112861128610
 000e01001d03001400014000140001400014000140001400014000140001400014000140001400014000140001400014000140001400014000140001400014000140001400014000140001400014000140001400
